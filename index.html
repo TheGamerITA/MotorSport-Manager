@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ultimate Motorsport Manager</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <section id="screen-start" class="screen active"></section>
+    <section id="screen-newcareer" class="screen"></section>
+    <section id="screen-app" class="screen">
+        <div id="app">
+            <header id="topbar">
+                <div class="brand">
+                    <span class="logo-mark"></span>
+                    <div>
+                        <h1>ULTIMATE MOTORSPORT MANAGER</h1>
+                        <div class="brand-sub">Master Control Room</div>
+                    </div>
+                </div>
+                <button class="btn-ghost" id="btnQuitCareer" style="margin-left: 20px;">⏏ Torna al Menu</button>
+                <div class="global-stats" id="globalStats"></div>
+            </header>
+            
+            <nav id="sidebar">
+                <button class="nav-btn active" data-view="race"><span class="nav-ico ico-race"></span> Weekend</button>
+                <button class="nav-btn" data-view="team"><span class="nav-ico ico-team"></span> Squadra</button>
+                <button class="nav-btn" data-view="rnd"><span class="nav-ico ico-rnd"></span> R&D</button>
+                <button class="nav-btn" data-view="scout"><span class="nav-ico ico-scout"></span> Scouting</button>
+                <button class="nav-btn" data-view="finance"><span class="nav-ico ico-finance"></span> Finanze</button>
+            </nav>
+
+            <main id="content">
+                <div id="view-race" class="view active">
+                    <div class="panel-head">
+                        <h2>Simulazione Weekend</h2>
+                        <div class="panel-actions">
+                            <button class="primary" id="simBtn">SIMULA PROSSIMA SESSIONE</button>
+                        </div>
+                    </div>
+                    <div class="meta-bar" id="raceMeta"></div>
+                    
+                    <div class="card" style="padding: 10px; margin-bottom: 16px;">
+                        <canvas id="raceCanvas" width="1000" height="500" style="width:100%; height:auto; background:#060a10; border-radius:2px;"></canvas>
+                        <div style="display:flex; gap:10px; padding:10px 0 0 0;">
+                            <button class="btn-secondary" id="btn-play">Play</button>
+                            <button class="btn-secondary" id="btn-pause">Pause</button>
+                            <button class="btn-secondary" id="btn-reset">Reset</button>
+                            <button class="btn-secondary" id="btn-speed">Velocità: 1x</button>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h3>Risultati Sessione</h3>
+                        <div class="table-wrap">
+                            <table class="data-table" id="resultsTable">
+                                <thead></thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <h3>Log Eventi</h3>
+                        <div class="log-box" id="raceLog"></div>
+                    </div>
+                </div>
+
+                <div id="view-team" class="view"><div class="panel-head"><h2>La tua Squadra</h2></div><div class="grid-cards" id="teamContent"></div></div>
+                <div id="view-rnd" class="view"><div class="panel-head"><h2>Ricerca & Sviluppo</h2></div><div class="card" id="rndContent"></div></div>
+                <div id="view-scout" class="view"><div class="panel-head"><h2>Academy & Scouting</h2><button class="primary" id="scoutBtn">AVVIA SCOUTING (€50k)</button></div><div class="grid-cards" id="scoutContent"></div></div>
+                <div id="view-finance" class="view"><div class="panel-head"><h2>Gestione Finanziaria</h2></div><div id="financeContent"></div></div>
+            </main>
+
+            <footer id="statusbar"><span id="statusMsg">Pronto.</span><span>Ultimate Motorsport Manager v1.0</span></footer>
+        </div>
+    </section>
+
+    <script src="data/categoryConfigs.js"></script>
+    <script src="data/teamsDrivers.js"></script>
+    <script src="data/teams/f1Teams.js"></script>
+    <script src="data/teams/f2Teams.js"></script>
+    <script src="data/teams/f3Teams.js"></script>
+    <script src="data/teams/feTeams.js"></script>
+    <script src="data/teams/motogpTeams.js"></script>
+    <script src="data/teams/moto2Teams.js"></script>
+    <script src="data/teams/moto3Teams.js"></script>
+    <script src="data/teams/wecTeams.js"></script>
+    <script src="data/teams/wrcTeams.js"></script>
+    <script src="data/teams/dakarTeams.js"></script>
+    <script src="data/tracks.js"></script>
+    <script src="engine/coreSimulation.js"></script>
+    <script src="engine/raceAnimator.js"></script>
+    <script src="engine/saveSystem.js"></script>
+    <script src="engine/careerManager.js"></script>
+    <script src="engine/screenManager.js"></script>
+    <script src="engine/renderView.js"></script>
+    <script src="ui/masterUI.js"></script>
+    <script src="ui/screens/startScreen.js"></script>
+    <script src="ui/screens/newCareerScreen.js"></script>
+    <script src="ui/screens/createTeamScreen.js"></script>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            try {
+                if (typeof StartScreen !== 'undefined') StartScreen.init();
+                if (typeof NewCareerScreen !== 'undefined') NewCareerScreen.init();
+                if (typeof MasterUI !== 'undefined') MasterUI.init();
+                
+                if (typeof RenderView !== 'undefined') {
+                    RenderView.init('raceCanvas');
+                }
+
+                // Pulsante per tornare al menu
+                const quitBtn = document.getElementById("btnQuitCareer");
+                if(quitBtn) {
+                    quitBtn.onclick = () => {
+                        if(confirm("Vuoi tornare al menu principale? Il progresso è salvato.")) {
+                            if (typeof CareerManager !== 'undefined') CareerManager.close();
+                            if (typeof ScreenManager !== 'undefined') ScreenManager.show('start');
+                            if (typeof StartScreen !== 'undefined') StartScreen.render();
+                        }
+                    };
+                }
+
+                if (typeof ScreenManager !== 'undefined') {
+                    ScreenManager.show('start');
+                    if (typeof StartScreen !== 'undefined') StartScreen.render();
+                }
+            } catch (e) { 
+                console.error("Errore di avvio:", e);
+                document.body.innerHTML = `<div style="color:red; padding:20px; font-family:monospace;">ERRORE DI AVVIO: ${e.message}<br>Controlla che tutti i file JS siano presenti nelle cartelle corrette.</div>`;
+            }
+        });
+    </script>
+</body>
+</html>
