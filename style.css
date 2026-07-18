@@ -55,6 +55,11 @@ body { background: var(--bg-0); color: var(--txt-0); font-family: var(--sans); f
 .wiz-hint { color: var(--txt-2); margin-bottom: 30px; font-size: 13px; }
 
 /* GRID CARDS SELEZIONE */
+.champ-filter { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+.champ-filter-btn { background: var(--bg-1); border: 1px solid var(--line); color: var(--txt-2); padding: 6px 14px; border-radius: 16px; cursor: pointer; font-size: 12px; transition: 0.2s; }
+.champ-filter-btn:hover { border-color: var(--accent); color: var(--txt-0); }
+.champ-filter-btn.active { background: var(--accent); color: #0a0e14; border-color: var(--accent); font-weight: 600; }
+
 .champ-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 15px; }
 .champ-card { background: var(--bg-1); border: 1px solid var(--line); padding: 20px; text-align: left; border-radius: 8px; cursor: pointer; transition: 0.2s; display: flex; flex-direction: column; gap: 10px; }
 .champ-card:hover { background: var(--bg-2); border-color: var(--accent); transform: translateY(-2px); }

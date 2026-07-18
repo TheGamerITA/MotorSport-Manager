@@ -15,11 +15,16 @@ const NewCareerScreen = (() => {
         selectedChamp = null;
         selectedTeam = null;
         isCustom = false;
+        currentFilter = "all";
         const firstStep = $("#step-category");
         if (firstStep) {
             $$(".wiz-step").forEach(s => s.classList.remove("active"));
             firstStep.classList.add("active");
         }
+        // Reset visivo del filtro attivo
+        const filterBtns = $$("#champFilter .champ-filter-btn");
+        filterBtns.forEach(b => b.classList.toggle("active", b.dataset.filter === "all"));
+        if (filterBtns.length) _renderChampGrid();
     }
 
     function build() {
@@ -32,6 +37,7 @@ const NewCareerScreen = (() => {
                 
                 <section class="wiz-step active" id="step-category">
                     <h2 class="wiz-title">1 · Scegli Campionato</h2>
+                    <div class="champ-filter" id="champFilter"></div>
                     <div class="champ-grid" id="champGrid"></div>
                 </section>
                 
@@ -76,20 +82,15 @@ const NewCareerScreen = (() => {
         _bind();
     }
 
+    let currentFilter = "all";
+
     function _bind() {
         $("#btnBack").onclick = () => ScreenManager.show("start");
-        
-        $("#champGrid").innerHTML = Object.values(CHAMPIONSHIPS).map(c => `
-            <button class="champ-card" data-champ="${c.id}">
-                <h3>${c.name}</h3>
-                <p class="champ-desc">${c.family} - ${c.raceType}</p>
-            </button>`).join("");
-            
-        $$("#champGrid .champ-card").forEach(c => c.onclick = () => { 
-            selectedChamp = c.dataset.champ; 
-            _goTo("step-mode"); 
-        });
-        
+
+        _buildFilter();
+        _renderChampGrid();
+
+        // Binding statici (costruiti una sola volta in build())
         $$("[data-mode]").forEach(b => b.onclick = () => {
             isCustom = b.dataset.mode === "custom";
             if (isCustom) {
@@ -106,8 +107,39 @@ const NewCareerScreen = (() => {
                 _goTo("step-pick");
             }
         });
-        
+
         $("#btnStart").onclick = _start;
+    }
+
+    /* Costruisce i pulsanti di filtro per "family" (macro-categoria). */
+    function _buildFilter() {
+        const families = Array.from(new Set(Object.values(CHAMPIONSHIPS).map(c => c.family))).sort();
+        const allBtn = `<button class="champ-filter-btn active" data-filter="all">Tutti</button>`;
+        const familyBtns = families.map(f => `<button class="champ-filter-btn" data-filter="${f}">${f}</button>`).join("");
+        $("#champFilter").innerHTML = allBtn + familyBtns;
+
+        $$("#champFilter .champ-filter-btn").forEach(b => b.onclick = () => {
+            $$("#champFilter .champ-filter-btn").forEach(x => x.classList.remove("active"));
+            b.classList.add("active");
+            currentFilter = b.dataset.filter;
+            _renderChampGrid();
+        });
+    }
+
+    /* Renderizza la griglia campionati applicando il filtro family attivo. */
+    function _renderChampGrid() {
+        const all = Object.values(CHAMPIONSHIPS);
+        const filtered = currentFilter === "all" ? all : all.filter(c => c.family === currentFilter);
+        $("#champGrid").innerHTML = filtered.map(c => `
+            <button class="champ-card" data-champ="${c.id}">
+                <h3>${c.name}</h3>
+                <p class="champ-desc">${c.family} - ${c.raceType}</p>
+            </button>`).join("");
+
+        $$("#champGrid .champ-card").forEach(c => c.onclick = () => {
+            selectedChamp = c.dataset.champ;
+            _goTo("step-mode");
+        });
     }
 
     function _renderTeamPick() {
