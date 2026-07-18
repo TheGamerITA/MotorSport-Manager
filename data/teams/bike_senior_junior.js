@@ -1,7 +1,7 @@
 /* =============================================================================
  * ULTIMATE MOTORSPORT MANAGER
  * File: data/teams/bike_senior_junior.js
- * Squadre per Moto Senior & Junior (WSBK, Supersport, EWC, Moto Junior)
+ * Teams for Bikes Senior & Junior (WSBK, Supersport, EWC, Moto Junior)
  * ========================================================================== */
 
 /* --- WSBK (World Superbike Championship) --- */

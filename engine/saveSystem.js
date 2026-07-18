@@ -2,34 +2,34 @@
  * ULTIMATE MOTORSPORT MANAGER
  * File: engine/saveSystem.js
  * -----------------------------------------------------------------------------
- * SISTEMA DI SALVATAGGIO MULTI-SLOT (illimitati) + AUTO-SAVE.
+ * MULTI-SLOT SAVE SYSTEM (unlimited) + AUTO-SAVE.
  *
- * Persistenza su localStorage. Ogni slot contiene lo STATO COMPLETO e
- * SERIALIZZABILE di una carriera, così può essere ripristinato al 100%:
- *   - careerState (metadati + avanzamento carriera)
- *   - teamsSnapshot (deep copy di ALL_TEAMS[champId] con tutte le modifiche)
- *   - rngState (stato del generatore casuali, per replay deterministici)
+ * Persistence on localStorage. Each slot contains the COMPLETE and
+ * SERIALIZABLE state of a career, so it can be restored 100%:
+ *   - careerState (metadata + career progress)
+ *   - teamsSnapshot (deep copy of ALL_TEAMS[champId] with all changes)
+ *   - rngState (state of the random generator, for deterministic replays)
  *
- * API pubblica:
- *   listSaves()           -> array di metadati (per la lista slot)
- *   createSave(name, data)-> crea slot, ritorna id
- *   loadSave(id)          -> ritorna l'intero stato salvato (per careerManager.restore)
- *   updateSave(id, data)  -> sovrascrive uno slot esistente (usato da autoSave)
+ * Public API:
+ *   listSaves()           -> array of metadata (for the slot list)
+ *   createSave(name, data)-> creates slot, returns id
+ *   loadSave(id)          -> returns the entire saved state (for careerManager.restore)
+ *   updateSave(id, data)  -> overwrites an existing slot (used by autoSave)
  *   deleteSave(id)
- *   autoSave()            -> aggiorna lo slot "corrente" della carriera attiva
- *   exportSave(id)        -> scarica un file JSON come backup
- *   importSave(jsonText)  -> importa un backup JSON come nuovo slot
+ *   autoSave()            -> updates the "current" slot of the active career
+ *   exportSave(id)        -> downloads a JSON file as backup
+ *   importSave(jsonText)  -> imports a JSON backup as a new slot
  *
- * Tutto è defensivo: se localStorage non è disponibile o pieno, degrada
- * gracefully segnalando l'errore senza crashare il gioco.
+ * Everything is defensive: if localStorage is not available or full, it degrades
+ * gracefully reporting the error without crashing the game.
  * ========================================================================== */
 
 const SaveSystem = (() => {
 
     const STORAGE_KEY = "umm_saves_v1";
-    const MAX_SAVES_SOFT_CAP = 200; // soft cap: oltre avvisa ma non blocca
+    const MAX_SAVES_SOFT_CAP = 200; // soft cap: above this it warns but doesn't block
 
-    /* --- accesso low-level a localStorage con fallback in memoria ---------- */
+    /* --- low-level localStorage access with in-memory fallback ---------- */
     const memoryFallback = {};
     function store() {
         try {
@@ -42,7 +42,7 @@ const SaveSystem = (() => {
         };
     }
 
-    /* --- lettura/scrittura dell'array salvataggi -------------------------- */
+    /* --- read/write of the saves array ------------------------------------ */
     function _readAll() {
         try {
             const raw = store().getItem(STORAGE_KEY);
@@ -59,18 +59,18 @@ const SaveSystem = (() => {
             store().setItem(STORAGE_KEY, JSON.stringify(arr));
             return true;
         } catch (e) {
-            // QuotaExceededError: storage pieno
-            console.error("SaveSystem: impossibile scrivere (storage pieno?).", e);
+            // QuotaExceededError: storage full
+            console.error("SaveSystem: unable to write (storage full?).", e);
             return false;
         }
     }
 
-    /* --- utility id univoco ----------------------------------------------- */
+    /* --- unique id utility ------------------------------------------------- */
     function _uid() {
         return "save_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 8);
     }
 
-    /* --- availability check per UI ---------------------------------------- */
+    /* --- availability check for UI ---------------------------------------- */
     function isAvailable() {
         try {
             const k = "__umm_test__";
@@ -81,10 +81,10 @@ const SaveSystem = (() => {
     }
 
     /* =============================================================================
-     * API PUBBLICA
+     * PUBLIC API
      * ========================================================================== */
 
-    /** Lista metadati di tutti gli slot, ordinati per ultimo aggiornamento. */
+    /** Lists metadata of all slots, ordered by last update. */
     function listSaves() {
         return _readAll()
             .map(s => ({
@@ -102,14 +102,14 @@ const SaveSystem = (() => {
             .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
     }
 
-    /** Crea un nuovo slot. data = { careerState, teamsSnapshot, rngState }.
-     *  Ritorna l'id dello slot o null in caso di fallimento. */
+    /** Creates a new slot. data = { careerState, teamsSnapshot, rngState }.
+     *  Returns the slot id or null on failure. */
     function createSave(name, data) {
         const arr = _readAll();
         const id = _uid();
         const now = Date.now();
         const slot = {
-            id, name: name || "Carriera senza nome",
+            id, name: name || "Untitled career",
             createdAt: now, updatedAt: now,
             data: _cloneData(data),
         };
@@ -118,7 +118,7 @@ const SaveSystem = (() => {
         return id;
     }
 
-    /** Aggiorna uno slot esistente (auto-save). Ritorna true/false. */
+    /** Updates an existing slot (auto-save). Returns true/false. */
     function updateSave(id, data) {
         const arr = _readAll();
         const slot = arr.find(s => s.id === id);
@@ -128,7 +128,7 @@ const SaveSystem = (() => {
         return _writeAll(arr);
     }
 
-    /** Legge l'intero stato di uno slot (per careerManager.restore). */
+    /** Reads the entire state of a slot (for careerManager.restore). */
     function loadSave(id) {
         const arr = _readAll();
         const slot = arr.find(s => s.id === id);
@@ -136,13 +136,13 @@ const SaveSystem = (() => {
         return slot.data;
     }
 
-    /** Elimina uno slot. */
+    /** Deletes a slot. */
     function deleteSave(id) {
         const arr = _readAll().filter(s => s.id !== id);
         return _writeAll(arr);
     }
 
-    /** Rinomina uno slot. */
+    /** Renames a slot. */
     function renameSave(id, newName) {
         const arr = _readAll();
         const slot = arr.find(s => s.id === id);
@@ -152,7 +152,7 @@ const SaveSystem = (() => {
         return _writeAll(arr);
     }
 
-    /** Esporta uno slot come file JSON scaricato (backup manuale). */
+    /** Exports a slot as a downloaded JSON file (manual backup). */
     function exportSave(id) {
         const arr = _readAll();
         const slot = arr.find(s => s.id === id);
@@ -169,18 +169,18 @@ const SaveSystem = (() => {
         return true;
     }
 
-    /** Importa un backup JSON come nuovo slot. Ritorna id o null. */
+    /** Imports a JSON backup as a new slot. Returns id or null. */
     function importSave(jsonText) {
         try {
             const slot = JSON.parse(jsonText);
-            if (!slot.data || !slot.data.careerState) throw new Error("Formato non valido");
-            // rigenera id/timestamps per evitare collisioni
+            if (!slot.data || !slot.data.careerState) throw new Error("Invalid format");
+            // regenerate id/timestamps to avoid collisions
             const arr = _readAll();
             const newId = _uid();
             const now = Date.now();
             arr.push({
                 id: newId,
-                name: (slot.name || "Carriera importata") + " (import)",
+                name: (slot.name || "Imported career") + " (import)",
                 createdAt: slot.createdAt || now,
                 updatedAt: now,
                 data: slot.data,
@@ -188,27 +188,27 @@ const SaveSystem = (() => {
             if (!_writeAll(arr)) return null;
             return newId;
         } catch (e) {
-            console.error("SaveSystem: import fallito.", e);
+            console.error("SaveSystem: import failed.", e);
             return null;
         }
     }
 
-    /** Restituisce il numero di slot occupati (per warning soft cap). */
+    /** Returns the number of occupied slots (for soft cap warning). */
     function countSaves() { return _readAll().length; }
 
-    /* --- clonazione sicura dello stato (deep, serializzabile) ------------- */
+    /* --- safe state cloning (deep, serializable) ------------------------- */
     function _cloneData(data) {
-        // JSON round-trip: scarta funzioni/riferimenti, lascia solo dati.
+        // JSON round-trip: discards functions/references, leaves only data.
         return JSON.parse(JSON.stringify(data));
     }
 
-    /* --- export per modulo ------------------------------------------------ */
+    /* --- module export ---------------------------------------------------- */
     return {
         isAvailable, listSaves, createSave, updateSave, loadSave,
         deleteSave, renameSave, exportSave, importSave, countSaves,
     };
 })();
 
-/* Esposizione globale */
+/* Global exposure */
 if (typeof window !== "undefined") window.SaveSystem = SaveSystem;
 if (typeof module !== "undefined" && module.exports) module.exports = { SaveSystem };

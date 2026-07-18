@@ -1,7 +1,7 @@
 /* =============================================================================
  * ULTIMATE MOTORSPORT MANAGER
  * File: data/teams/raid.js
- * Squadre per Raid (W2RC, Baja Cup)
+ * Teams for Raid (W2RC, Baja Cup)
  * ========================================================================== */
 
 /* --- W2RC (World Rally-Raid Championship — Dakar, Abu Dhabi, etc.) --- */

@@ -1,7 +1,7 @@
 /* =============================================================================
  * ULTIMATE MOTORSPORT MANAGER
  * File: data/teams/karting.js
- * Squadre per Karting (World, Regionali)
+ * Teams for Karting (World, Regional)
  * ========================================================================== */
 
 /* --- KARTING WORLD (FIA Karting World Championship — KZ, OK, OKJ) --- */
@@ -28,7 +28,7 @@ const KARTING_WORLD_TEAMS = [
     ]},
 ];
 
-/* --- KARTING REGIONALI (Campionati Italiani/Europei) --- */
+/* --- KARTING REGIONAL (Italian/European Championships) --- */
 const KARTING_REGIONAL_TEAMS = [
     { id:"kr_energy", name:"Energy Corse", color:"#DC2626", carModel:"Energy Corse TM", power:0.82, reliability:0.79, drivers:[
         { id:"kr_d1", name:"A. Lombardo", pace:0.82, racecraft:0.79, consistency:0.77, fitness:0.83, age:15, nationality:"ITA" },

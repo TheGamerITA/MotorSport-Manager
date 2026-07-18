@@ -7,18 +7,18 @@ const StartScreen = (() => {
             <div class="hero">
                 <div class="hero-badge">2D Racing Edition</div>
                 <h1 class="hero-title">Ultimate<br>Motorsport<br>Manager</h1>
-                <p class="hero-sub">L'intero ecosistema del motorsport globale</p>
+                <p class="hero-sub">The entire global motorsport ecosystem</p>
                 <div class="hero-actions">
-                    <button class="btn-primary" id="btnNewCareer">Nuova Carriera</button>
-                    <button class="btn-secondary" id="btnContinue">Carica Carriera</button>
-                    <button class="btn-secondary" id="btnSaves">Cartella Salvataggi</button>
+                    <button class="btn-primary" id="btnNewCareer">New Career</button>
+                    <button class="btn-secondary" id="btnContinue">Load Career</button>
+                    <button class="btn-secondary" id="btnSaves">Save Folder</button>
                 </div>
             </div>
 
             <div class="saves-panel" id="savesPanel">
                 <div class="saves-head">
-                    <h2>Carriere Salvate</h2>
-                    <button class="btn-ghost" id="btnRefresh">↻ Aggiorna</button>
+                    <h2>Saved Careers</h2>
+                    <button class="btn-ghost" id="btnRefresh">↻ Refresh</button>
                 </div>
                 <div class="saves-list" id="savesList"></div>
             </div>
@@ -43,7 +43,7 @@ const StartScreen = (() => {
         const list = $("#savesList");
         
         if (!saves.length) {
-            list.innerHTML = `<div class="saves-empty"><p>Nessuna carriera salvata.</p><p class="muted">Inizia la tua avventura con "Nuova Carriera".</p></div>`;
+            list.innerHTML = `<div class="saves-empty"><p>No saved careers.</p><p class="muted">Start your journey with "New Career".</p></div>`;
             return;
         }
 
@@ -53,12 +53,12 @@ const StartScreen = (() => {
                     <div class="save-name">${s.name}</div>
                     <div class="save-meta">
                         <span class="chip">${s.champName}</span>
-                        <span>Stagione ${s.season}</span>
+                        <span>Season ${s.season}</span>
                         <span>Round ${s.round}/${s.totalRounds}</span>
                     </div>
                 </div>
                 <div class="save-actions">
-                    <button class="btn-primary" style="padding: 8px 15px; font-size: 11px; width: auto;" data-act="load" data-id="${s.id}">Carica</button>
+                    <button class="btn-primary" style="padding: 8px 15px; font-size: 11px; width: auto;" data-act="load" data-id="${s.id}">Load</button>
                     <button class="btn-ghost" style="color: var(--bad); border-color: var(--bad);" data-act="delete" data-id="${s.id}">✕</button>
                 </div>
             </div>

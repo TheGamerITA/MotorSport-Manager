@@ -14,7 +14,7 @@ const MasterUI = (() => {
         if (!state) return;
         currentChampId = state.champId;
         $(".brand h1").textContent = state.champName;
-        $(".brand-sub").textContent = `Stagione ${state.season} · ${state.playerTeamName}`;
+        $(".brand-sub").textContent = `Season ${state.season} · ${state.playerTeamName}`;
         refreshAllViews();
     }
 
@@ -34,10 +34,10 @@ const MasterUI = (() => {
     function runWeekend() {
         const btn = $("#simBtn");
         const state = CareerManager.getState();
-        const sessions = ["Prova Libera", "Qualifica", "Gara"];
+        const sessions = ["Practice", "Qualifying", "Race"];
 
         btn.disabled = true;
-        btn.textContent = "SIMULAZIONE...";
+        btn.textContent = "SIMULATING...";
 
         setTimeout(() => {
             const result = CareerManager.simulateCurrentSession();
@@ -48,13 +48,13 @@ const MasterUI = (() => {
                 renderSessionResult(result, completedSession);
                 if (typeof RenderView !== "undefined") {
                     if (completedSession === 2) {
-                        // Gara: animazione completa con piloti
+                        // Race: full animation with drivers
                         RenderView.loadAndPlay(result);
                     } else {
-                        // Prove libere / Qualifiche: mostra anteprima statica
-                        // del tracciato (evita il "canvas verde" senza animazione)
+                        // Practice / Qualifying: show static track preview
+                        // (avoids the "green canvas" with no animation)
                         const round = state.calendar[state.currentRound];
-                        const label = completedSession === 0 ? "📊 PROVE LIBERE" : "🏁 QUALIFICHE";
+                        const label = completedSession === 0 ? "📊 PRACTICE" : "🏁 QUALIFYING";
                         if (round && round.trackId) {
                             RenderView.showTrackPreview(round.trackId, label);
                         }
@@ -63,21 +63,21 @@ const MasterUI = (() => {
             }
 
             if (advance.seasonComplete) {
-                $("#statusMsg").textContent = "Stagione conclusa!";
-                btn.textContent = "NUOVA STAGIONE";
+                $("#statusMsg").textContent = "Season complete!";
+                btn.textContent = "NEW SEASON";
                 btn.onclick = _startNextSeason;
                 _showSeasonSummary();
             } else {
                 const nextSess = sessions[CareerManager.getState().currentSession];
-                $("#statusMsg").textContent = `Round ${state.currentRound + 1}: ${sessions[completedSession]} completata. Prossima: ${nextSess}`;
-                btn.textContent = `SIMULA ${nextSess.toUpperCase()}`;
+                $("#statusMsg").textContent = `Round ${state.currentRound + 1}: ${sessions[completedSession]} complete. Next: ${nextSess}`;
+                btn.textContent = `SIMULATE ${nextSess.toUpperCase()}`;
             }
             btn.disabled = false;
             refreshAllViews();
         }, 500);
     }
 
-    /* Renderizza i risultati in base al tipo di sessione (0=practice, 1=qualifying, 2=race) */
+    /* Renders the results based on the session type (0=practice, 1=qualifying, 2=race) */
     function renderSessionResult(result, sessionType) {
         if (sessionType === 0) renderPracticeResult(result);
         else if (sessionType === 1) renderQualifyingResult(result);
@@ -85,7 +85,7 @@ const MasterUI = (() => {
     }
 
     function renderPracticeResult(result) {
-        $("#resultsTable thead").innerHTML = `<tr><th>#</th><th>Pilota</th><th>Team</th><th>Miglior Giro</th><th>Consistenza</th><th>Setup</th></tr>`;
+        $("#resultsTable thead").innerHTML = `<tr><th>#</th><th>Driver</th><th>Team</th><th>Best Lap</th><th>Consistency</th><th>Setup</th></tr>`;
         $("#resultsTable tbody").innerHTML = result.results.map((r, i) => `
             <tr>
                 <td class="pos">${i + 1}</td>
@@ -95,11 +95,11 @@ const MasterUI = (() => {
                 <td>${Math.round(r.consistency * 100)}%</td>
                 <td>${Math.round(r.setupConfidence * 100)}%</td>
             </tr>`).join("");
-        $("#raceLog").innerHTML = `<div class="log-line">📊 Prove Libere completate. Il team ha raccolto dati sul setup e sull'affidabilità.</div>`;
+        $("#raceLog").innerHTML = `<div class="log-line">📊 Practice complete. The team gathered setup and reliability data.</div>`;
     }
 
     function renderQualifyingResult(result) {
-        $("#resultsTable thead").innerHTML = `<tr><th>Grid</th><th>Pilota</th><th>Team</th><th>Tempo Giro</th><th>Gap Pole</th><th>Gap Prec.</th></tr>`;
+        $("#resultsTable thead").innerHTML = `<tr><th>Grid</th><th>Driver</th><th>Team</th><th>Lap Time</th><th>Gap to Pole</th><th>Gap to Prev.</th></tr>`;
         const poleTime = result.grid.length ? result.grid[0].bestLapMs : 0;
         const playerTeamId = CareerManager.getState()?.playerTeamId;
         const allTeams = (typeof ALL_TEAMS !== "undefined" && ALL_TEAMS[CareerManager.getState().champId]) || [];
@@ -120,7 +120,7 @@ const MasterUI = (() => {
                 <td style="color:var(--txt-2);">${gapPrev}</td>
             </tr>`;
         }).join("");
-        $("#raceLog").innerHTML = `<div class="log-line">🏁 Qualifica completata. La griglia di partenza è stata definita.</div>`;
+        $("#raceLog").innerHTML = `<div class="log-line">🏁 Qualifying complete. The starting grid has been set.</div>`;
     }
 
     function bindScouting() { $("#scoutBtn").onclick = scoutNewTalent; }
@@ -155,7 +155,7 @@ const MasterUI = (() => {
         if (!team) return;
         $("#teamContent").innerHTML = team.drivers.map(d => {
             const baseStats = ["pace","consistency","racecraft","wetPerformance","fuelTyreMgmt","qualifying"];
-            const statLabel = { pace:"Pace", consistency:"Costanza", racecraft:"Racecraft", wetPerformance:"Bagnato", fuelTyreMgmt:"Mgmt", qualifying:"Qualifica" };
+            const statLabel = { pace:"Pace", consistency:"Consistency", racecraft:"Racecraft", wetPerformance:"Wet", fuelTyreMgmt:"Mgmt", qualifying:"Qualifying" };
             const rows = baseStats.map(k => `
                 <span class="lab">${statLabel[k]}</span>
                 ${statBar(d[k] || 0.5, d[k] < 0.4 ? "bad" : d[k] > 0.85 ? "good" : "")}
@@ -168,44 +168,44 @@ const MasterUI = (() => {
                     <img src="img/${team.id}.png" class="team-logo" onerror="this.outerHTML='<div class="team-logo fallback" style="background:${team.color}">${team.name.substring(0,2).toUpperCase()}</div>'" />
                     <div>
                         <div class="dc-name">#${d.number} ${d.name}</div>
-                        <div class="dc-meta">Rating: ${Math.round((d.rating||0)*100)} · Età: ${d.age} · ${d.nationality}</div>
+                        <div class="dc-meta">Rating: ${Math.round((d.rating||0)*100)} · Age: ${d.age} · ${d.nationality}</div>
                     </div>
                 </div>
                 <div class="dc-stats">${rows}</div>
                 <div style="margin-top:10px; font-size:11px; color:var(--txt-2); display:flex; justify-content:space-between;">
                     <span>Morale: <b style="color:var(--accent);">${d.morale}</b></span>
-                    <span>Stipendio: <b style="color:var(--accent-2);">€${(d.salary/1000).toFixed(1)}M</b></span>
-                    <span>Contratto: ${d.contractYears}a</span>
+                    <span>Salary: <b style="color:var(--accent-2);">€${(d.salary/1000).toFixed(1)}M</b></span>
+                    <span>Contract: ${d.contractYears}y</span>
                 </div>
                 <button class="btn-secondary driver-release" data-id="${d.id}" style="margin-top:10px; width:100%; color:var(--bad);">
-                    Rilascia Pilota
+                    Release Driver
                 </button>
             </div>`;
         }).join("");
         $$("#teamContent .driver-release").forEach(b => b.onclick = () => _releaseDriver(b.dataset.id));
     }
 
-    /* Rilascia un pilota dal team del giocatore (con penale stipendio residuo). */
+    /* Releases a driver from the player's team (with a residual salary penalty). */
     function _releaseDriver(driverId) {
         const team = CareerManager.getPlayerTeam();
         if (!team) return;
         const driver = team.drivers.find(d => d.id === driverId);
         if (!driver) return;
-        // Penale: 50% dello stipendio residuo per la stagione
+        // Penalty: 50% of the residual salary for the season
         const penalty = Math.round((driver.salary || 0) * 0.5);
         if (!CareerManager.trySpend(penalty)) {
-            $("#statusMsg").textContent = "Fondi insufficienti per pagare la penale di rilascio.";
+            $("#statusMsg").textContent = "Insufficient funds to pay the release penalty.";
             return;
         }
         team.drivers = team.drivers.filter(d => d.id !== driverId);
-        $("#statusMsg").textContent = `${driver.name} rilasciato. Penale pagata: €${(penalty/1000).toFixed(1)}M.`;
+        $("#statusMsg").textContent = `${driver.name} released. Penalty paid: €${(penalty/1000).toFixed(1)}M.`;
         renderTeamView();
         renderFinanceView();
         renderGlobalStats();
     }
 
     function renderRaceResult(result) {
-        $("#resultsTable thead").innerHTML = `<tr><th>Pos</th><th>Pilota</th><th>Team</th><th>Tempo</th><th>Punti</th></tr>`;
+        $("#resultsTable thead").innerHTML = `<tr><th>Pos</th><th>Driver</th><th>Team</th><th>Time</th><th>Points</th></tr>`;
         $("#resultsTable tbody").innerHTML = result.results.map(r => `
             <tr>
                 <td class="pos">${r.position}</td>
@@ -215,7 +215,7 @@ const MasterUI = (() => {
                 <td class="pts">${r.points}</td>
             </tr>`).join("");
 
-        $("#raceLog").innerHTML = result.logs.length ? result.logs.map(l => `<div class="log-line"><span class="drv">${l.driver}</span> ${l.msg}</div>`).join("") : `<div class="log-line">Gara pulita.</div>`;
+        $("#raceLog").innerHTML = result.logs.length ? result.logs.map(l => `<div class="log-line"><span class="drv">${l.driver}</span> ${l.msg}</div>`).join("") : `<div class="log-line">Clean race.</div>`;
     }
 
     function renderFinanceView() {
@@ -226,10 +226,10 @@ const MasterUI = (() => {
 
         $("#financeContent").innerHTML = `
             <div class="card">
-                <h3>Bilancio Annuale</h3>
-                <div class="fin-row"><span>Budget disponibile</span><span class="v pos">€${(budget/1000).toFixed(2)}M</span></div>
-                <div class="fin-row"><span>Stipendi piloti</span><span class="v neg">−€${(payroll/1000).toFixed(2)}M</span></div>
-                <div class="fin-row" style="border-bottom:none;"><b>Saldo proiettato</b><b class="v" style="color:var(--accent);">€${projected.toFixed(2)}M</b></div>
+                <h3>Annual Balance</h3>
+                <div class="fin-row"><span>Available budget</span><span class="v pos">€${(budget/1000).toFixed(2)}M</span></div>
+                <div class="fin-row"><span>Driver salaries</span><span class="v neg">−€${(payroll/1000).toFixed(2)}M</span></div>
+                <div class="fin-row" style="border-bottom:none;"><b>Projected balance</b><b class="v" style="color:var(--accent);">€${projected.toFixed(2)}M</b></div>
             </div>`;
     }
 
@@ -237,12 +237,12 @@ const MasterUI = (() => {
 
     function renderScoutingView() {
         if (scoutResults.length === 0) {
-            $("#scoutContent").innerHTML = `<p class="hint">Nessun talento scovato. Usa il pulsante "Avvia Scouting" per cercare giovani promesse.</p>`;
+            $("#scoutContent").innerHTML = `<p class="hint">No talent found. Use the "Start Scouting" button to search for young prospects.</p>`;
             return;
         }
         $("#scoutContent").innerHTML = scoutResults.map(d => {
             const baseStats = ["pace","consistency","racecraft","wetPerformance","fuelTyreMgmt","qualifying"];
-            const statLabel = { pace:"Pace", consistency:"Costanza", racecraft:"Racecraft", wetPerformance:"Bagnato", fuelTyreMgmt:"Mgmt", qualifying:"Qualifica" };
+            const statLabel = { pace:"Pace", consistency:"Consistency", racecraft:"Racecraft", wetPerformance:"Wet", fuelTyreMgmt:"Mgmt", qualifying:"Qualifying" };
             const rows = baseStats.map(k => `
                 <span class="lab">${statLabel[k]}</span>
                 ${statBar(d[k] || 0.5, d[k] < 0.4 ? "bad" : d[k] > 0.85 ? "good" : "")}
@@ -253,13 +253,13 @@ const MasterUI = (() => {
                 <div class="dc-head">
                     <div>
                         <div class="dc-name">🆕 ${d.name}</div>
-                        <div class="dc-meta">Rating: ${Math.round((d.rating||0)*100)} · Età: ${d.age} · ${d.nationality}</div>
+                        <div class="dc-meta">Rating: ${Math.round((d.rating||0)*100)} · Age: ${d.age} · ${d.nationality}</div>
                     </div>
                 </div>
                 <div class="dc-stats">${rows}</div>
                 <div style="margin-top:10px; font-size:11px; color:var(--txt-2); display:flex; justify-content:space-between; align-items:center;">
-                    <span>Stipendio richiesto: <b style="color:var(--accent-2);">€${(d.salary/1000).toFixed(1)}M</b></span>
-                    <button class="btn-primary scout-sign" data-id="${d.id}">Firma</button>
+                    <span>Required salary: <b style="color:var(--accent-2);">€${(d.salary/1000).toFixed(1)}M</b></span>
+                    <button class="btn-primary scout-sign" data-id="${d.id}">Sign</button>
                 </div>
             </div>`;
         }).join("");
@@ -267,20 +267,20 @@ const MasterUI = (() => {
     }
 
     const RND_DEPARTMENTS = [
-        { key: "aero",      label: "Aerodinamica", desc: "Carico e efficienza aero." },
-        { key: "engine",    label: "Motore",       desc: "Potenza e affidabilità." },
-        { key: "mechanics", label: "Meccanica",    desc: "Sospensioni e pit-stop." },
+        { key: "aero",      label: "Aerodynamics", desc: "Downforce and aero efficiency." },
+        { key: "engine",    label: "Engine",        desc: "Power and reliability." },
+        { key: "mechanics", label: "Mechanics",     desc: "Suspension and pit stops." },
     ];
     const RND_MAX_LEVEL = 99;
     const RND_STEP = 2;
     function rndUpgradeCost(level) { return Math.round(400 + level * 40); }
 
     const RND_PROJECTS = [
-        { id: "drs_evo",       name: "DRS Evoluto",       desc: "Ala posteriore più efficiente.", dept: "aero",      reqLevel: 70, cost: 6000, bonus: 4 },
-        { id: "ground_effect", name: "Effetto Suolo Spinto", desc: "Più carico in curva veloce.", dept: "aero",      reqLevel: 85, cost: 12000, bonus: 5 },
-        { id: "hybrid_evo",    name: "Powertrain Ibrido", desc: "Migliore efficienza termica.",   dept: "engine",    reqLevel: 70, cost: 7000, bonus: 4 },
-        { id: "energy_recovery", name: "Recupero Energia", desc: "ERS potenziato in staccata.",   dept: "engine",    reqLevel: 85, cost: 12000, bonus: 5 },
-        { id: "fast_pit",      name: "Pit-Crew Élite",    desc: "Pit-stop più rapidi e sicuri.",  dept: "mechanics", reqLevel: 70, cost: 6000, bonus: 4 },
+        { id: "drs_evo",       name: "Advanced DRS",       desc: "More efficient rear wing.",        dept: "aero",      reqLevel: 70, cost: 6000, bonus: 4 },
+        { id: "ground_effect", name: "Enhanced Ground Effect", desc: "More downforce in high-speed corners.", dept: "aero",      reqLevel: 85, cost: 12000, bonus: 5 },
+        { id: "hybrid_evo",    name: "Hybrid Powertrain",   desc: "Better thermal efficiency.",        dept: "engine",    reqLevel: 70, cost: 7000, bonus: 4 },
+        { id: "energy_recovery", name: "Energy Recovery",  desc: "Enhanced ERS under braking.",       dept: "engine",    reqLevel: 85, cost: 12000, bonus: 5 },
+        { id: "fast_pit",      name: "Elite Pit Crew",      desc: "Faster and safer pit stops.",       dept: "mechanics", reqLevel: 70, cost: 6000, bonus: 4 },
     ];
 
     function renderRndView() {
@@ -299,7 +299,7 @@ const MasterUI = (() => {
             const maxed = level >= RND_MAX_LEVEL;
             const affordable = budget >= cost;
             const disabled = maxed || !affordable;
-            const btnLabel = maxed ? "MAX" : `Potenzia +${RND_STEP} · ${budgetM(cost)}`;
+            const btnLabel = maxed ? "MAX" : `Upgrade +${RND_STEP} · ${budgetM(cost)}`;
             return `
             <div class="card">
                 <div style="display:flex; justify-content:space-between; align-items:baseline;">
@@ -328,14 +328,14 @@ const MasterUI = (() => {
 
             let status, btn;
             if (unlocked) {
-                status = `<span style="color:var(--good);">✔ Sbloccato (+${p.bonus} ${depLabel})</span>`;
+                status = `<span style="color:var(--good);">✔ Unlocked (+${p.bonus} ${depLabel})</span>`;
                 btn = "";
             } else if (!meetsReq) {
-                status = `<span style="color:var(--txt-2);">🔒 Richiede ${depLabel} Lv ${p.reqLevel}</span>`;
-                btn = `<button class="btn-secondary" disabled style="opacity:.5; cursor:not-allowed;">Bloccato</button>`;
+                status = `<span style="color:var(--txt-2);">🔒 Requires ${depLabel} Lv ${p.reqLevel}</span>`;
+                btn = `<button class="btn-secondary" disabled style="opacity:.5; cursor:not-allowed;">Locked</button>`;
             } else {
-                status = `<span style="color:${affordable ? "var(--accent)" : "var(--bad)"};">${budgetM(p.cost)}${affordable ? "" : " (fondi insuff.)"}</span>`;
-                btn = `<button class="btn-primary rnd-unlock" data-proj="${p.id}" ${canUnlock ? "" : "disabled style='opacity:.5; cursor:not-allowed;'"}>Sblocca</button>`;
+                status = `<span style="color:${affordable ? "var(--accent)" : "var(--bad)"};">${budgetM(p.cost)}${affordable ? "" : " (insufficient funds)"}</span>`;
+                btn = `<button class="btn-primary rnd-unlock" data-proj="${p.id}" ${canUnlock ? "" : "disabled style='opacity:.5; cursor:not-allowed;'"}>Unlock</button>`;
             }
 
             return `
@@ -351,12 +351,12 @@ const MasterUI = (() => {
 
         $("#rndContent").innerHTML = `
             <div class="fin-row" style="margin-bottom:14px;">
-                <span>Budget disponibile per lo sviluppo</span>
+                <span>Available development budget</span>
                 <b style="color:var(--accent);">${budgetM(budget)}</b>
             </div>
-            <h3 style="margin:6px 0 10px;">Reparti Tecnici</h3>
+            <h3 style="margin:6px 0 10px;">Technical Departments</h3>
             <div class="grid-cards">${deptCards}</div>
-            <h3 style="margin:20px 0 10px;">Progetti Speciali</h3>
+            <h3 style="margin:20px 0 10px;">Special Projects</h3>
             <div class="grid-cards">${projCards}</div>`;
 
         $$("#rndContent .rnd-upgrade").forEach(b => b.onclick = () => _upgradeDept(b.dataset.dept));
@@ -369,9 +369,9 @@ const MasterUI = (() => {
         const level = t.staff[deptKey] ?? 50;
         if (level >= RND_MAX_LEVEL) return;
         const cost = rndUpgradeCost(level);
-        if (!CareerManager.trySpend(cost)) { $("#statusMsg").textContent = "Fondi insufficienti per il potenziamento."; return; }
+        if (!CareerManager.trySpend(cost)) { $("#statusMsg").textContent = "Insufficient funds for upgrade."; return; }
         CareerManager.setStaffLevel(deptKey, Math.min(RND_MAX_LEVEL, level + RND_STEP));
-        $("#statusMsg").textContent = `Reparto potenziato: ${deptKey} → Lv ${t.staff[deptKey]}.`;
+        $("#statusMsg").textContent = `Department upgraded: ${deptKey} → Lv ${t.staff[deptKey]}.`;
         renderRndView();
         renderGlobalStats();
         renderTeamView();
@@ -384,10 +384,10 @@ const MasterUI = (() => {
         const p = RND_PROJECTS.find(x => x.id === projId);
         if (!p || (t.rnd.unlocked && t.rnd.unlocked[p.id])) return;
         if ((t.staff[p.dept] ?? 50) < p.reqLevel) return;
-        if (!CareerManager.trySpend(p.cost)) { $("#statusMsg").textContent = "Fondi insufficienti per il progetto."; return; }
+        if (!CareerManager.trySpend(p.cost)) { $("#statusMsg").textContent = "Insufficient funds for project."; return; }
         CareerManager.markProjectUnlocked(p.id);
         CareerManager.setStaffLevel(p.dept, Math.min(RND_MAX_LEVEL, (t.staff[p.dept] ?? 50) + p.bonus));
-        $("#statusMsg").textContent = `Progetto sbloccato: ${p.name} (+${p.bonus} ${p.dept}).`;
+        $("#statusMsg").textContent = `Project unlocked: ${p.name} (+${p.bonus} ${p.dept}).`;
         renderRndView();
         renderGlobalStats();
         renderTeamView();
@@ -402,7 +402,7 @@ const MasterUI = (() => {
 
     function scoutNewTalent() {
         const cost = 50;
-        if (!CareerManager.trySpend(cost)) { $("#statusMsg").textContent = "Fondi insufficienti per lo scouting."; return; }
+        if (!CareerManager.trySpend(cost)) { $("#statusMsg").textContent = "Insufficient funds for scouting."; return; }
         const count = 2 + Math.floor(Math.random()*2);
         scoutResults = [];
         for (let i=0;i<count;i++){
@@ -424,7 +424,7 @@ const MasterUI = (() => {
             driver.rating = (driver.pace+driver.consistency+driver.racecraft+driver.qualifying)/4;
             scoutResults.push(driver);
         }
-        $("#statusMsg").textContent = `Scouting completato: ${count} talenti trovati.`;
+        $("#statusMsg").textContent = `Scouting complete: ${count} talents found.`;
         renderScoutingView();
         renderGlobalStats();
         renderFinanceView();
@@ -435,15 +435,15 @@ const MasterUI = (() => {
         if (!driver) return;
         const team = CareerManager.getPlayerTeam();
         if (!team) return;
-        if (team.drivers.length >= 2) { $("#statusMsg").textContent = "Hai già 2 piloti in squadra."; return; }
+        if (team.drivers.length >= 2) { $("#statusMsg").textContent = "You already have 2 drivers on the team."; return; }
         const signCost = 100;
-        if (!CareerManager.trySpend(signCost)) { $("#statusMsg").textContent = "Fondi insufficienti per l'ingaggio."; return; }
+        if (!CareerManager.trySpend(signCost)) { $("#statusMsg").textContent = "Insufficient funds for signing."; return; }
         const newDriver = { ...driver };
-        // NON cancellare newDriver.id: l'ID è fondamentale per il tracciamento
-        // del pilota (DNF nell'animazione, progressione carriera, standing).
+        // DO NOT delete newDriver.id: the ID is essential for tracking
+        // the driver (DNF in the animation, career progression, standings).
         team.drivers.push(newDriver);
         scoutResults = scoutResults.filter(d => d.id !== driverId);
-        $("#statusMsg").textContent = `${newDriver.name} firmato per ${team.name}!`;
+        $("#statusMsg").textContent = `${newDriver.name} signed for ${team.name}!`;
         renderTeamView();
         renderScoutingView();
         renderGlobalStats();
@@ -461,7 +461,7 @@ const MasterUI = (() => {
         const teamStand = (state.standings?.teams || []).slice().sort((a,b)=>b.points-a.points);
 
         if (!driverStand.length && !teamStand.length) {
-            $("#standingsContent").innerHTML = `<div class="card"><p class="hint">Nessun risultato ancora. Disputa una gara per popolare la classifica.</p></div>`;
+            $("#standingsContent").innerHTML = `<div class="card"><p class="hint">No results yet. Race to populate the standings.</p></div>`;
             return;
         }
 
@@ -470,9 +470,9 @@ const MasterUI = (() => {
 
         $("#standingsContent").innerHTML = `
             <div class="card">
-                <h3>🏆 Classifica Piloti</h3>
+                <h3>🏆 Drivers' Standings</h3>
                 <div class="table-wrap"><table class="data-table">
-                    <thead><tr><th>#</th><th>Pilota</th><th>Team</th><th>Punti</th></tr></thead>
+                    <thead><tr><th>#</th><th>Driver</th><th>Team</th><th>Points</th></tr></thead>
                     <tbody>${driverStand.map((d,i)=>`
                         <tr style="${d.teamId===playerTeamId?'font-weight:bold;':''}">
                             <td class="pos">${medal[i]||(i+1)}</td>
@@ -483,9 +483,9 @@ const MasterUI = (() => {
                 </table></div>
             </div>
             <div class="card" style="margin-top:16px;">
-                <h3>🏁 Classifica Costruttori</h3>
+                <h3>🏁 Constructors' Standings</h3>
                 <div class="table-wrap"><table class="data-table">
-                    <thead><tr><th>#</th><th>Team</th><th>Punti</th></tr></thead>
+                    <thead><tr><th>#</th><th>Team</th><th>Points</th></tr></thead>
                     <tbody>${teamStand.map((t,i)=>`
                         <tr style="${t.id===playerTeamId?'font-weight:bold;':''}">
                             <td class="pos">${medal[i]||(i+1)}</td>
@@ -498,9 +498,9 @@ const MasterUI = (() => {
 
     function renderCalendarView() {
         const state = CareerManager.getState();
-        if (!state) { $("#calendarContent").innerHTML = `<p class="hint">Nessuna carriera attiva.</p>`; return; }
+        if (!state) { $("#calendarContent").innerHTML = `<p class="hint">No active career.</p>`; return; }
         const cal = state.calendar || [];
-        if (!cal.length) { $("#calendarContent").innerHTML = `<p class="hint">Calendario non disponibile.</p>`; return; }
+        if (!cal.length) { $("#calendarContent").innerHTML = `<p class="hint">Calendar not available.</p>`; return; }
 
         const current = state.currentRound;
         $("#calendarContent").innerHTML = `
@@ -513,7 +513,7 @@ const MasterUI = (() => {
                 <div class="card" style="${isCurrent?'border-left:3px solid var(--accent);':''}">
                     <div style="display:flex; justify-content:space-between; align-items:baseline;">
                         <h3 style="margin:0;">${badge} ${tr.name || "Round "+(i+1)}</h3>
-                        <span style="${statusCls}font-size:12px;">${done?"Completato":isCurrent?"In corso":"Da disputare"}</span>
+                        <span style="${statusCls}font-size:12px;">${done?"Completed":isCurrent?"In progress":"To be disputed"}</span>
                     </div>
                     <p class="hint" style="margin:6px 0;">${tr.country || ""}${tr.surface?" · "+tr.surface:""}</p>
                 </div>`;
@@ -521,7 +521,7 @@ const MasterUI = (() => {
     }
 
     function renderSponsorsView() {
-        if (!CareerManager.isActive()) { $("#sponsorsContent").innerHTML = `<p class="hint">Nessuna carriera attiva.</p>`; return; }
+        if (!CareerManager.isActive()) { $("#sponsorsContent").innerHTML = `<p class="hint">No active career.</p>`; return; }
         const state = CareerManager.getState();
         const team = CareerManager.getPlayerTeam();
         const prestige = team?.prestige ?? 50;
@@ -530,12 +530,12 @@ const MasterUI = (() => {
         const ss = sponsorsData.seasonStats || {};
         const budgetM = (v) => `€${((v||0)/1000).toFixed(1)}M`;
 
-        // Calcola entrate sponsor proiettate per la prossima gara
+        // Calculate projected sponsor income for the next race
         const projectedPerRace = signed.reduce((sum, s) => {
             return sum + s.basePerRace * (s.tier === "title" ? 1.0 : s.tier === "technical" ? 0.8 : 0.6);
         }, 0);
 
-        // Sponsor disponibili (non firmati, prestigio sufficiente)
+        // Available sponsors (not signed, sufficient prestige)
         const available = (window.SPONSOR_POOL || []).filter(s => {
             if (signed.some(x => x.id === s.id)) return false;
             if ((s.prestigeReq || 0) > prestige) return false;
@@ -547,7 +547,7 @@ const MasterUI = (() => {
         const tierLabel = { title:"Title", technical:"Technical", partner:"Partner" };
         const tierColor = { title:"#00d4ff", technical:"#f39c12", partner:"#27ae60" };
 
-        // Card sponsor firmati
+        // Signed sponsor cards
         const signedCards = signed.length ? signed.map(s => {
             const obj = s.objective || {};
             const objProgressText = _sponsorObjectiveProgress(s, ss, state);
@@ -558,22 +558,22 @@ const MasterUI = (() => {
                     <span style="font-size:11px; padding:2px 8px; border-radius:8px; background:${(s.color||tierColor[s.tier])}22; color:${s.color||tierColor[s.tier]};">${tierLabel[s.tier]}</span>
                 </div>
                 <div style="display:flex; gap:16px; margin:8px 0; font-size:12px; flex-wrap:wrap;">
-                    <span>Base/gara: <b style="color:var(--accent);">${budgetM(s.basePerRace)}</b></span>
-                    <span>Bonus vittoria: <b>+${budgetM(s.bonusWin)}</b></span>
-                    <span>Bonus podio: <b>+${budgetM(s.bonusPodium)}</b></span>
-                    <span>Bonus punti: <b>+${s.bonusPoints}K/pt</b></span>
+                    <span>Base/race: <b style="color:var(--accent);">${budgetM(s.basePerRace)}</b></span>
+                    <span>Win bonus: <b>+${budgetM(s.bonusWin)}</b></span>
+                    <span>Podium bonus: <b>+${budgetM(s.bonusPodium)}</b></span>
+                    <span>Points bonus: <b>+${s.bonusPoints}K/pt</b></span>
                 </div>
                 ${obj.label ? `
                 <div style="margin-top:8px; padding:8px; background:rgba(255,255,255,0.03); border-radius:4px;">
-                    <div style="font-size:11px; color:var(--txt-2);">📋 Obiettivo: ${obj.label}</div>
+                    <div style="font-size:11px; color:var(--txt-2);">📋 Objective: ${obj.label}</div>
                     <div style="font-size:11px; margin-top:4px;">${objProgressText}</div>
-                    <div style="font-size:11px; color:var(--accent); margin-top:2px;">Premio: ${budgetM(obj.reward || 0)}</div>
+                    <div style="font-size:11px; color:var(--accent); margin-top:2px;">Reward: ${budgetM(obj.reward || 0)}</div>
                 </div>` : ""}
-                <button class="btn-secondary sponsor-remove" data-id="${s.id}" style="margin-top:10px; color:var(--bad);">Risolvi (penale €300K)</button>
+                <button class="btn-secondary sponsor-remove" data-id="${s.id}" style="margin-top:10px; color:var(--bad);">Terminate (€300K penalty)</button>
             </div>`;
-        }).join("") : `<p class="hint">Nessuno sponsor firmato. Cerca sponsor disponibili qui sotto.</p>`;
+        }).join("") : `<p class="hint">No sponsors signed. Browse available sponsors below.</p>`;
 
-        // Card sponsor disponibili
+        // Available sponsor cards
         const availCards = available.length ? available.map(s => {
             const tierInfo = window.SPONSOR_TIERS[s.tier] || { maxSlots: 0 };
             return `
@@ -583,46 +583,46 @@ const MasterUI = (() => {
                     <span style="font-size:11px; padding:2px 8px; border-radius:8px; background:${s.color}22; color:${s.color};">${tierLabel[s.tier]}</span>
                 </div>
                 <div style="display:flex; gap:16px; margin:8px 0; font-size:12px; flex-wrap:wrap;">
-                    <span>Base/gara: <b style="color:var(--accent);">${budgetM(s.basePerRace)}</b></span>
-                    <span>Bonus vittoria: <b>+${budgetM(s.bonusWin)}</b></span>
-                    <span>Bonus podio: <b>+${budgetM(s.bonusPodium)}</b></span>
+                    <span>Base/race: <b style="color:var(--accent);">${budgetM(s.basePerRace)}</b></span>
+                    <span>Win bonus: <b>+${budgetM(s.bonusWin)}</b></span>
+                    <span>Podium bonus: <b>+${budgetM(s.bonusPodium)}</b></span>
                 </div>
                 ${s.objective ? `
                 <div style="margin-top:6px; font-size:11px; color:var(--txt-2);">📋 ${s.objective.label}</div>
-                <div style="font-size:11px; color:var(--accent);">Premio stagione: ${budgetM(s.objective.reward || 0)}</div>` : ""}
-                <button class="btn-primary sponsor-sign" data-id="${s.id}" style="margin-top:10px;">Firma Sponsor</button>
+                <div style="font-size:11px; color:var(--accent);">Season reward: ${budgetM(s.objective.reward || 0)}</div>` : ""}
+                <button class="btn-primary sponsor-sign" data-id="${s.id}" style="margin-top:10px;">Sign Sponsor</button>
             </div>`;
-        }).join("") : `<p class="hint">Nessuno sponsor disponibile per il tuo livello di prestigio attuale.</p>`;
+        }).join("") : `<p class="hint">No sponsors available for your current prestige level.</p>`;
 
-        // Statistiche stagionali
+        // Season statistics
         const statsBar = `
         <div class="card" style="margin-bottom:16px;">
-            <h3 style="margin:0 0 10px;">📊 Statistiche Stagionali Sponsor</h3>
+            <h3 style="margin:0 0 10px;">📊 Sponsor Season Stats</h3>
             <div style="display:flex; gap:20px; flex-wrap:wrap; font-size:12px;">
-                <span>Gare disputate: <b>${ss.totalRaces || 0}</b></span>
-                <span style="color:var(--good);">Vittorie: <b>${ss.wins || 0}</b></span>
-                <span style="color:var(--accent);">Podi: <b>${ss.podiums || 0}</b></span>
-                <span>Arrivi: <b>${ss.finishes || 0}</b></span>
-                <span>Gare a punti: <b>${ss.pointsFinishes || 0}</b></span>
-                <span>Top 5 qualifica: <b>${ss.qualTop5 || 0}</b></span>
+                <span>Races: <b>${ss.totalRaces || 0}</b></span>
+                <span style="color:var(--good);">Wins: <b>${ss.wins || 0}</b></span>
+                <span style="color:var(--accent);">Podiums: <b>${ss.podiums || 0}</b></span>
+                <span>Finishes: <b>${ss.finishes || 0}</b></span>
+                <span>Points finishes: <b>${ss.pointsFinishes || 0}</b></span>
+                <span>Top 5 qualifying: <b>${ss.qualTop5 || 0}</b></span>
             </div>
             <div style="margin-top:10px; font-size:13px; color:var(--accent);">
-                💰 Entrate sponsor proiettate prossima gara: <b>${budgetM(projectedPerRace)}</b>
+                💰 Projected sponsor income next race: <b>${budgetM(projectedPerRace)}</b>
             </div>
         </div>`;
 
         $("#sponsorsContent").innerHTML = `
             ${statsBar}
-            <h3 style="margin:6px 0 10px;">Sponsor Firmati (${signed.length})</h3>
+            <h3 style="margin:6px 0 10px;">Signed Sponsors (${signed.length})</h3>
             <div class="grid-cards">${signedCards}</div>
-            <h3 style="margin:20px 0 10px;">Sponsor Disponibili</h3>
+            <h3 style="margin:20px 0 10px;">Available Sponsors</h3>
             <div class="grid-cards">${availCards}</div>`;
 
         $$("#sponsorsContent .sponsor-sign").forEach(b => b.onclick = () => _signSponsor(b.dataset.id));
         $$("#sponsorsContent .sponsor-remove").forEach(b => b.onclick = () => _removeSponsor(b.dataset.id));
     }
 
-    /* Calcola il testo di progressione dell'obiettivo di uno sponsor. */
+    /* Calculates the objective progress text for a sponsor. */
     function _sponsorObjectiveProgress(sponsor, ss, state) {
         const obj = sponsor.objective;
         if (!obj) return "";
@@ -633,13 +633,13 @@ const MasterUI = (() => {
             case "pointsFinish": current = ss.pointsFinishes || 0; break;
             case "finishRate":
                 const rate = (ss.totalRaces||0) > 0 ? (ss.finishes||0) / ss.totalRaces : 0;
-                return `Progresso: ${Math.round(rate*100)}% / ${Math.round(obj.threshold*100)}%`;
+                return `Progress: ${Math.round(rate*100)}% / ${Math.round(obj.threshold*100)}%`;
             case "qualifyingPosition": current = ss.qualTop5 || 0; break;
             case "championshipPosition":
                 const pos = state.standings.teams.findIndex(t => t.id === state.playerTeamId);
-                return pos >= 0 ? `Posizione attuale: ${pos+1} / target top ${obj.threshold}` : "—";
+                return pos >= 0 ? `Current position: ${pos+1} / target top ${obj.threshold}` : "—";
         }
-        return `Progresso: ${current} / ${target}`;
+        return `Progress: ${current} / ${target}`;
     }
 
     function _signSponsor(sponsorId) {
@@ -658,10 +658,10 @@ const MasterUI = (() => {
         renderGlobalStats();
     }
 
-    /* Mostra un riepilogo di fine stagione come modale/overlay. */
+    /* Shows an end-of-season summary as a modal/overlay. */
     function _showSeasonSummary() {
-        // Valuta gli obiettivi sponsor prima di mostrare il riepilogo
-        // (il flag interno evita doppi pagamenti quando startNextSeason richiama la stessa funzione)
+        // Evaluate sponsor objectives before showing the summary
+        // (the internal flag avoids double payments when startNextSeason calls the same function)
         CareerManager._evaluateSponsorObjectives();
         const summary = CareerManager.getSeasonSummary();
         if (!summary) return;
@@ -673,9 +673,9 @@ const MasterUI = (() => {
             <tr>
                 <td>${s.name}</td>
                 <td>${s.objective || "—"}</td>
-                <td style="color:${s.achieved?'var(--good)':'var(--bad)'};">${s.achieved?'✔ Completato':'✘ Non raggiunto'}</td>
+                <td style="color:${s.achieved?'var(--good)':'var(--bad)'};">${s.achieved?'✔ Achieved':'✘ Not achieved'}</td>
                 <td class="pts">${s.achieved ? `+€${(s.reward/1000).toFixed(1)}M` : '—'}</td>
-            </tr>`).join("") : `<tr><td colspan="4" class="hint">Nessuno sponsor firmato questa stagione.</td></tr>`;
+            </tr>`).join("") : `<tr><td colspan="4" class="hint">No sponsors signed this season.</td></tr>`;
 
         const driverRows = summary.drivers.length ? summary.drivers.map(d => `
             <tr><td>${d.name}</td><td class="pts">${d.points} pt</td></tr>`).join("") : "";
@@ -685,23 +685,23 @@ const MasterUI = (() => {
         overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;";
         overlay.innerHTML = `
             <div class="card" style="max-width:600px;width:100%;max-height:85vh;overflow-y:auto;">
-                <h2 style="margin-top:0;">🏁 Stagione Conclusa</h2>
+                <h2 style="margin-top:0;">🏁 Season Complete</h2>
                 <div style="display:flex;gap:20px;flex-wrap:wrap;margin-bottom:16px;">
-                    <div class="stat-pill"><span class="k">Posizione Team</span><span class="v">${teamPosText} / ${summary.totalTeams}</span></div>
-                    <div class="stat-pill"><span class="k">Punti Team</span><span class="v">${summary.teamPoints}</span></div>
+                    <div class="stat-pill"><span class="k">Team Position</span><span class="v">${teamPosText} / ${summary.totalTeams}</span></div>
+                    <div class="stat-pill"><span class="k">Team Points</span><span class="v">${summary.teamPoints}</span></div>
                 </div>
                 ${driverRows ? `
-                <h3>📋 Risultati Piloti</h3>
+                <h3>📋 Driver Results</h3>
                 <div class="table-wrap"><table class="data-table">
-                    <thead><tr><th>Pilota</th><th>Punti</th></tr></thead>
+                    <thead><tr><th>Driver</th><th>Points</th></tr></thead>
                     <tbody>${driverRows}</tbody>
                 </table></div>` : ""}
-                <h3 style="margin-top:16px;">💰 Obiettivi Sponsor</h3>
+                <h3 style="margin-top:16px;">💰 Sponsor Objectives</h3>
                 <div class="table-wrap"><table class="data-table">
-                    <thead><tr><th>Sponsor</th><th>Obiettivo</th><th>Esito</th><th>Ricompensa</th></tr></thead>
+                    <thead><tr><th>Sponsor</th><th>Objective</th><th>Outcome</th><th>Reward</th></tr></thead>
                     <tbody>${sponsorRows}</tbody>
                 </table></div>
-                <button class="primary" id="btnNextSeason" style="margin-top:20px;width:100%;">INIZIA NUOVA STAGIONE →</button>
+                <button class="primary" id="btnNextSeason" style="margin-top:20px;width:100%;">START NEW SEASON →</button>
             </div>`;
 
         document.body.appendChild(overlay);
@@ -711,16 +711,16 @@ const MasterUI = (() => {
         };
     }
 
-    /* Avvia la transizione alla stagione successiva. */
+    /* Starts the transition to the next season. */
     function _startNextSeason() {
         const res = CareerManager.startNextSeason();
         if (!res) return;
 
         const btn = $("#simBtn");
-        btn.textContent = "SIMULA PROSSIMA SESSIONE";
+        btn.textContent = "SIMULATE NEXT SESSION";
         btn.onclick = runWeekend;
 
-        $("#statusMsg").textContent = `Stagione ${res.season} iniziata! Bonus budget: €${(res.seasonBonus/1000).toFixed(1)}M`;
+        $("#statusMsg").textContent = `Season ${res.season} started! Budget bonus: €${(res.seasonBonus/1000).toFixed(1)}M`;
         refreshFromCareer();
     }
 
@@ -728,7 +728,7 @@ const MasterUI = (() => {
         const state = CareerManager.getState();
         if (!state) return;
         const round = state.calendar?.[state.currentRound] || {};
-        const sessions = ["Prova Libera","Qualifica","Gara"];
+        const sessions = ["Practice","Qualifying","Race"];
         const sess = sessions[state.currentSession] || "—";
         $("#raceMeta").innerHTML = `
             <span><b>Round ${state.currentRound + 1}/${state.totalRounds}</b></span>

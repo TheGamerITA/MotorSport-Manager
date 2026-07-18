@@ -1,13 +1,13 @@
 /* =============================================================================
  * ULTIMATE MOTORSPORT MANAGER
- * File: ui/renderView.js (VERSIONE WAYPOINTS)
+ * File: ui/renderView.js (WAYPOINTS VERSION)
  * ----------------------------------------------------------------------------- */
 
 const RenderView = (() => {
     let canvas, ctx;
     let animator;
     let currentRaceData = null;
-    let trackPath = []; // Cache dei punti calcolati della pista
+    let trackPath = []; // Cache of the calculated track points
 
     const COLORS = {
         track: '#555555',
@@ -19,14 +19,14 @@ const RenderView = (() => {
     function init(canvasId) {
         canvas = document.getElementById(canvasId);
         if (!canvas) {
-            console.warn("Canvas non trovato, RenderView disattivato.");
+            console.warn("Canvas not found, RenderView disabled.");
             return;
         }
         ctx = canvas.getContext('2d');
         
-        // Verifica che RaceAnimator esista
+        // Check that RaceAnimator exists
         if (typeof RaceAnimator === 'undefined') {
-            console.error("RaceAnimator non caricato!");
+            console.error("RaceAnimator not loaded!");
             return;
         }
         
@@ -45,12 +45,12 @@ const RenderView = (() => {
     }
 
     function loadAndPlay(eventResult) {
-        if (!ctx) return; // Se il canvas non è inizializzato, esce
+        if (!ctx) return; // If canvas is not initialized, exit
         currentRaceData = eventResult;
-        trackPath = []; // Resetta percorso
+        trackPath = []; // Reset path
         animator.loadEventData(eventResult);
         
-        // Pre-calcola il percorso del tracciato se ci sono i waypoint
+        // Pre-compute the track path if waypoints are available
         if (currentRaceData.track && currentRaceData.track.waypoints) {
             trackPath = buildPath(currentRaceData.track);
         }
@@ -59,9 +59,9 @@ const RenderView = (() => {
         animator.play();
     }
 
-    /* Mostra un'anteprima statica del tracciato (senza animazione piloti)
-       usata per le sessioni di prove libere e qualifiche, dove non ci sono
-       timeline da animare. Evita il "canvas verde" durante queste sessioni. */
+    /* Shows a static track preview (without driver animation)
+       used for practice and qualifying sessions, where there are no
+       timelines to animate. Avoids the "green canvas" during these sessions. */
     function showTrackPreview(trackId, label) {
         if (!ctx) return;
         if (typeof getTrack !== "function") return;
@@ -74,7 +74,7 @@ const RenderView = (() => {
         draw({ currentTimeMs: 0, durationMs: 0, drivers: [], _previewLabel: label || "" });
     }
 
-    /* Pulisce il canvas mostrando solo il prato (sfondo vuoto). */
+    /* Clears the canvas showing only the grass (empty background). */
     function clearCanvas() {
         if (!ctx) return;
         currentRaceData = null;
@@ -90,10 +90,10 @@ const RenderView = (() => {
         currentSpeedIdx = (currentSpeedIdx + 1) % speedLevels.length;
         animator.setSpeed(speedLevels[currentSpeedIdx]);
         const btn = document.getElementById('btn-speed');
-        if(btn) btn.innerText = `Velocità: ${speedLevels[currentSpeedIdx]}x`;
+        if(btn) btn.innerText = `Speed: ${speedLevels[currentSpeedIdx]}x`;
     }
 
-    /* Converte i waypoint 0..1000 in pixel del canvas */
+    /* Converts 0..1000 waypoints to canvas pixels */
     function buildPath(track) {
         const w = canvas.width;
         const h = canvas.height;
@@ -112,7 +112,7 @@ const RenderView = (() => {
         return pts;
     }
 
-    /* Ottieni le coordinate X,Y in base al progress (0..1) */
+    /* Get X,Y coordinates based on progress (0..1) */
     function getPositionOnPath(progress) {
         if (trackPath.length < 2) return { x: 0, y: 0 };
         
@@ -151,7 +151,7 @@ const RenderView = (() => {
 
         if (!state || !state.drivers) return;
 
-        // Disegna piloti
+        // Draw drivers
         for (const d of state.drivers) {
             if (d.trackProgress === null || d.trackProgress === undefined) continue;
 
@@ -162,7 +162,7 @@ const RenderView = (() => {
                 pos = getLinearCoords(d.trackProgress, w, h);
             }
 
-            // I piloti ritirati (DNF) sono mostrati come punti grigi fermi
+            // Retired drivers (DNF) are shown as stationary gray dots
             if (d.dnf) {
                 ctx.fillStyle = 'rgba(0,0,0,0.3)';
                 ctx.beginPath(); ctx.arc(pos.x+2, pos.y+2, 6, 0, Math.PI*2); ctx.fill();
@@ -198,19 +198,19 @@ const RenderView = (() => {
         if (state._previewLabel) {
             ctx.fillText(state._previewLabel, 20, h - 20);
         } else {
-            ctx.fillText(`Tempo: ${formatTime(state.currentTimeMs)} / ${formatTime(state.durationMs)}`, 20, h - 20);
+            ctx.fillText(`Time: ${formatTime(state.currentTimeMs)} / ${formatTime(state.durationMs)}`, 20, h - 20);
         }
     }
 
     function drawTrackFromWaypoints() {
         if (trackPath.length < 2) return;
         const track = currentRaceData.track || {};
-        // larghezza pista dal trackWidth (0..1): Monaco stretta, Monza larga
+        // track width from trackWidth (0..1): Monaco narrow, Monza wide
         const tw = (typeof track.trackWidth === "number") ? track.trackWidth : 0.7;
         const trackW = Math.max(14, 18 + tw * 34); // 14..52 px
         const borderW = trackW + 6;
 
-        // colore asfalto/superficie
+        // asphalt/surface color
         const surfaceColors = {
             asphalt: { track: '#4a4a4a', border: '#2a2a2a' },
             gravel:  { track: '#8a7a5a', border: '#5a4a3a' },
@@ -220,7 +220,7 @@ const RenderView = (() => {
         };
         const sc = surfaceColors[track.surface] || surfaceColors.asphalt;
 
-        // bordo pista (scuro)
+        // track border (dark)
         ctx.beginPath();
         ctx.moveTo(trackPath[0].x, trackPath[0].y);
         for (let i = 1; i < trackPath.length; i++) {
@@ -232,7 +232,7 @@ const RenderView = (() => {
         ctx.lineJoin = 'round';
         ctx.stroke();
 
-        // asfalto/superficie
+        // asphalt/surface
         ctx.beginPath();
         ctx.moveTo(trackPath[0].x, trackPath[0].y);
         for (let i = 1; i < trackPath.length; i++) {
@@ -242,7 +242,7 @@ const RenderView = (() => {
         ctx.strokeStyle = sc.track;
         ctx.stroke();
 
-        // linea centro (tratteggiata, solo closed circuit)
+        // center line (dashed, closed circuit only)
         if (track.type === "closed") {
             ctx.beginPath();
             ctx.setLineDash([10, 14]);
@@ -256,7 +256,7 @@ const RenderView = (() => {
             ctx.setLineDash([]);
         }
 
-        // linea di partenza/arrivo (acheckerata)
+        // start/finish line (checkered)
         const start = trackPath[0];
         const next = trackPath[1] || trackPath[0];
         const angle = Math.atan2(next.y - start.y, next.x - start.x);
@@ -270,11 +270,11 @@ const RenderView = (() => {
         }
         ctx.restore();
 
-        // Per tracciati aperti (rally/raid/hillclimb): frecce direzionali e
-        // bandiera a scacchi all'arrivo, per chiarire che è point-to-point.
+        // For open tracks (rally/raid/hillclimb): directional arrows and
+        // checkered flag at finish, to clarify it's point-to-point.
         if (track.type === "open") {
             const end = trackPath[trackPath.length - 1];
-            // Bandiera a scacchi all'arrivo
+            // Checkered flag at finish
             ctx.save();
             ctx.translate(end.x, end.y);
             const endAngle = Math.atan2(
@@ -291,7 +291,7 @@ const RenderView = (() => {
             }
             ctx.restore();
 
-            // Frecce direzionali lungo il percorso ogni N segmenti
+            // Directional arrows along the path every N segments
             const arrowInterval = Math.max(3, Math.floor(trackPath.length / 6));
             for (let i = arrowInterval; i < trackPath.length - 1; i += arrowInterval) {
                 const p = trackPath[i];
@@ -311,7 +311,7 @@ const RenderView = (() => {
             }
         }
 
-        // overlay info tracciato (nome, paese, caratteristiche)
+        // track info overlay (name, country, features)
         if (track.name) {
             ctx.fillStyle = 'rgba(0,0,0,0.75)';
             ctx.fillRect(10, 10, 320, 58);

@@ -2,11 +2,11 @@
  * ULTIMATE MOTORSPORT MANAGER
  * File: data/teams/wrcTeams.js
  * -----------------------------------------------------------------------------
- * DATABASE FIA WRC — RALLY1 (Stagione 2026)
- * Rally: gara a cronometro. Il motore (_runStageRally) legge le stat speciali:
- *   paceNotesReading (lettura note del navigatore) e carControl (controllo su
- *   terra/sterrato/neve). Passate via specialStats e fuse nel driver.
- * Ogni costruttore schiera più equipaggi (crew) = più drivers nello stesso Team.
+ * FIA WRC DATABASE — RALLY1 (2026 Season)
+ * Rally: timed event. The engine (_runStageRally) reads the special stats:
+ *   paceNotesReading (reading the co-driver's notes) and carControl (control on
+ *   gravel/dirt/snow). Passed via specialStats and fused into the driver.
+ * Each manufacturer fields multiple crews (crew) = multiple drivers in the same Team.
  * ========================================================================== */
 
 const WRC_TEAMS = [

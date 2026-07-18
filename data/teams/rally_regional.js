@@ -1,7 +1,7 @@
 /* =============================================================================
  * ULTIMATE MOTORSPORT MANAGER
  * File: data/teams/rally_regional.js
- * Squadre per Rally Regionali (ERC, ARC, APRC, CODASUR, MERC, NACAM, Regionali)
+ * Teams for Regional Rally (ERC, ARC, APRC, CODASUR, MERC, NACAM, Regional)
  * ========================================================================== */
 
 /* --- ERC (European Rally Championship) --- */
@@ -108,7 +108,7 @@ const NACAM_TEAMS = [
     ]},
 ];
 
-/* --- RALLY REGIONALI (Campionati Italiani/Locali) --- */
+/* --- RALLY REGIONAL (Italian/Local Championships) --- */
 const RALLY_REGIONAL_TEAMS = [
     { id:"rr_citroen", name:"Citroën Italia Rally", color:"#7C3AED", carModel:"Citroën C3 Rally2", power:0.81, reliability:0.79, drivers:[
         { id:"rr_d1", name:"G. Vercelli", pace:0.81, racecraft:0.76, consistency:0.74, fitness:0.77, age:32, nationality:"ITA" },

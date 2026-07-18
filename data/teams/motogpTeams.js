@@ -2,9 +2,9 @@
  * ULTIMATE MOTORSPORT MANAGER
  * File: data/teams/motogpTeams.js
  * -----------------------------------------------------------------------------
- * DATABASE MOTOGP (Stagione 2026)
- * Nota: nel motore per la famiglia "Bike" contano le stat base + crashRiskFactor
- * (definito nel config). riderWeightImpact è gestito a livello di categoria.
+ * DATABASE MOTOGP (Season 2026)
+ * Note: in the engine for the "Bike" family the base stats + crashRiskFactor
+ * matter (defined in the config). riderWeightImpact is handled at category level.
  * ========================================================================== */
 
 const MOTOGP_TEAMS = [

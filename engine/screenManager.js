@@ -2,34 +2,34 @@
  * ULTIMATE MOTORSPORT MANAGER
  * File: engine/screenManager.js
  * -----------------------------------------------------------------------------
- * SCREEN MANAGER — gestisce la navigazione tra le schermate principali.
+ * SCREEN MANAGER — manages navigation between the main screens.
  * ========================================================================== */
 
 const ScreenManager = (() => {
 
-    const screens = {}; // Registro delle schermate { id: { onShow: fn } }
+    const screens = {}; // Registry of screens { id: { onShow: fn } }
 
-    /** Registra una schermata con il suo id e le callback opzionali */
+    /** Registers a screen with its id and optional callbacks */
     function register(id, screenObj) {
-        if (!id) console.error("ScreenManager: id mancante nella registrazione");
+        if (!id) console.error("ScreenManager: id missing in registration");
         screens[id] = screenObj || {};
     }
 
-    /** Mostra la schermata specificata e ne esegue la callback onShow */
+    /** Shows the specified screen and runs its onShow callback */
     function show(id) {
-        // Nascondi tutte le schermate
+        // Hide all screens
         document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
-        
-        // Trova e mostra la schermata richiesta
+
+        // Find and show the requested screen
         const el = document.getElementById(`screen-${id}`);
         if (el) {
             el.classList.add('active');
         } else {
-            console.error(`ScreenManager: schermata 'screen-${id}' non trovata nel DOM`);
+            console.error(`ScreenManager: screen 'screen-${id}' not found in DOM`);
             return;
         }
 
-        // Esegui la callback onShow se registrata
+        // Run the onShow callback if registered
         if (screens[id] && typeof screens[id].onShow === 'function') {
             screens[id].onShow();
         }

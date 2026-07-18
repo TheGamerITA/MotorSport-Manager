@@ -2,7 +2,7 @@
  * ULTIMATE MOTORSPORT MANAGER
  * File: data/teams/feTeams.js
  * -----------------------------------------------------------------------------
- * DATABASE FORMULA E (Stagione 2025/2026)
+ * DATABASE FORMULA E (Season 2025/2026)
  * ========================================================================== */
 
 const FE_TEAMS = [
@@ -50,7 +50,7 @@ const FE_TEAMS = [
     })
 ];
 
-// Aggancia i team FE al database globale se esiste già
+// Hook FE teams to the global database if it already exists
 if (typeof window !== "undefined" && window.ALL_TEAMS) {
     window.ALL_TEAMS.fe = FE_TEAMS;
 }

@@ -2,39 +2,39 @@
  * ULTIMATE MOTORSPORT MANAGER
  * File: engine/coreSimulation.js
  * -----------------------------------------------------------------------------
- * IL MOTORE DI GIOCO — classe `RaceCalculator`.
+ * THE GAME ENGINE — `RaceCalculator` class.
  *
- * FILOSOFIA (Regola d'Oro): il motore è GENERICO e "stupido".
- *  - NON conosce F1, MotoGP, WEC, WRC o Dakar per nome.
- *  - Legge SOLO il `ChampionshipConfig` di un campionato e decide cosa calcolare
- *    in base a: cfg.raceType, cfg.features.* e cfg.physicsModifiers.*.
- *  - Tutta la differenza tra discipline risiede nei dati, NON nel codice.
- *  - Aggiungere NASCAR/IndyCar/FE/Drift/Baja in futuro = aggiungere config,
- *    ZERO modifiche a questo file (se i flag esistono già nello schema).
+ * PHILOSOPHY (Golden Rule): the engine is GENERIC and "stupid".
+ *  - It does NOT know F1, MotoGP, WEC, WRC or Dakar by name.
+ *  - It reads ONLY the `ChampionshipConfig` of a championship and decides what to
+ *    calculate based on: cfg.raceType, cfg.features.* and cfg.physicsModifiers.*.
+ *  - All the difference between disciplines resides in the data, NOT the code.
+ *  - Adding NASCAR/IndyCar/FE/Drift/Baja in the future = add config,
+ *    ZERO changes to this file (if the flags already exist in the schema).
  *
- * ARCHITETTURA A PIPELINE:
+ * PIPELINE ARCHITECTURE:
  *   simulateEvent(championshipId, options)
- *     -> per ogni partecipante: buildBasePace()
- *     -> applica moduli attivi (lettura features):
+ *     -> for each participant: buildBasePace()
+ *     -> apply active modules (read features):
  *          tyreWearModule, trafficModule, stintModule, stageModule,
  *          navigationModule, dayNightModule, judgingModule
- *     -> ordina e produce risultati (Time o JudgeStyle)
+ *     -> sort and produce results (Time or JudgeStyle)
  * ========================================================================== */
 
 class RaceCalculator {
     constructor() {
-        // RNG stabile (seed opzionale per riproducibilità degli eventi).
+        // Stable RNG (optional seed for event reproducibility).
         this.seed = (Math.random() * 1e9) | 0;
         this.rngState = this.seed;
     }
 
-    /* --- imposta seed deterministico (usato da CareerManager per replay) -- */
+    /* --- set deterministic seed (used by CareerManager for replays) -------- */
     setSeed(seed) {
         this.seed = (seed >>> 0) || 1;
         this.rngState = this.seed;
     }
 
-    /* --- RNG deterministico mulberry32 (riavvolgibile per replay/scouting) -- */
+    /* --- deterministic RNG mulberry32 (rewindable for replay/scouting) ------ */
     _rand() {
         let t = (this.rngState += 0x6D2B79F5);
         t = Math.imul(t ^ (t >>> 15), t | 1);
@@ -43,7 +43,7 @@ class RaceCalculator {
     }
     _randRange(min, max) { return min + this._rand() * (max - min); }
 
-    /* --- utility: legge una stat pilota con fallback neutro (0.5) ---------- */
+    /* --- utility: reads a driver stat with neutral fallback (0.5) ---------- */
     _stat(driver, key, fallback = 0.5) {
         const v = driver[key];
         return (typeof v === "number" && !isNaN(v)) ? v : fallback;
@@ -53,25 +53,25 @@ class RaceCalculator {
     _clamp01(v) { return Math.max(0, Math.min(1, v)); }
 
     /* =============================================================================
-     * QUALIFICA — simula la sessione di qualifica e restituisce la griglia.
-     * A differenza della gara, qui conta soprattutto la stat `qualifying` e si
-     * gira con carburante scarico e gomme fresche. Ritorna un array ordinato
-     * di {driverId, driver, teamId, team, position, lapTimeMs, lapTimeStr}.
-     * options.grid vettore di driverId per forzare l'ordine (debug/replay).
+     * QUALIFYING — simulates the qualifying session and returns the grid.
+     * Unlike the race, here the `qualifying` stat matters most and you run with
+     * light fuel and fresh tyres. Returns an ordered array of
+     * {driverId, driver, teamId, team, position, lapTimeMs, lapTimeStr}.
+     * options.grid: array of driverIds to force the order (debug/replay).
      * ========================================================================== */
     simulateQualifying(championshipId, options = {}) {
         const cfg = (typeof CHAMPIONSHIPS !== "undefined")
             ? CHAMPIONSHIPS[championshipId] : null;
-        if (!cfg) throw new Error(`RaceCalculator: championship '${championshipId}' non trovato`);
+        if (!cfg) throw new Error(`RaceCalculator: championship '${championshipId}' not found`);
 
         const teams = (typeof ALL_TEAMS !== "undefined") ? (ALL_TEAMS[championshipId] || []) : [];
-        if (teams.length === 0) throw new Error(`Nessun team per '${championshipId}'`);
+        if (teams.length === 0) throw new Error(`No teams for '${championshipId}'`);
 
         const track = (typeof getTrack === "function" && options.trackId)
             ? getTrack(options.trackId) : null;
         const baseLapMs = this._baseLapTimeMs(cfg, track);
 
-        // Costruisci partecipanti e ritmo base
+        // Build participants and base pace
         const entrants = [];
         for (const team of teams) {
             for (const driver of team.drivers) {
@@ -81,26 +81,26 @@ class RaceCalculator {
             }
         }
 
-        // Simula 3 tentativi (Q1/Q2/Q3-style semplificato): prendi il miglior giro
+        // Simulate 3 attempts (simplified Q1/Q2/Q3 style): take the best lap
         const results = entrants.map(e => {
             let bestLap = Infinity;
             const d = e.driver;
-            // La qualifica pesa molto di più la stat qualifying + pace puro
+            // Qualifying weighs the qualifying stat + pure pace much more heavily
             let qualPace = e.rawPace * 0.55 + this._stat(d, "qualifying") * 0.35 + this._stat(d, "consistency") * 0.10;
-            // Meteo bagnato in qualifica: pesa wetPerformance
+            // Wet weather in qualifying: weighs wetPerformance
             if (options.weather === "wet") qualPace *= (0.75 + 0.25 * this._stat(d, "wetPerformance"));
             if (options.weather === "mixed") qualPace *= (0.90 + 0.10 * this._stat(d, "wetPerformance"));
             // Morale
             qualPace *= (0.92 + 0.08 * ((d.morale || 75) / 100));
 
-            // 3 tentativi con varianza: il migliore conta
+            // 3 attempts with variance: the best one counts
             for (let attempt = 1; attempt <= 3; attempt++) {
-                // ogni tentativo ha un piccolo miglioramento (riscaldamento gomme) ma anche rischio errore
-                const heat = 1 - 0.004 * attempt; // si va leggermente più veloci
+                // each attempt has a small improvement (tyre warm-up) but also error risk
+                const heat = 1 - 0.004 * attempt; // goes slightly faster
                 const errorRisk = (1 - this._stat(d, "consistency")) * 0.015 * attempt;
                 let lapTime = baseLapMs / Math.max(0.3, qualPace) * heat;
-                if (this._rand() < errorRisk) lapTime *= 1.05; // errore nel giro
-                // micro-varianza
+                if (this._rand() < errorRisk) lapTime *= 1.05; // mistake on the lap
+                // micro-variance
                 lapTime *= (1 + this._randRange(-0.008, 0.008));
                 if (lapTime < bestLap) bestLap = lapTime;
             }
@@ -121,14 +121,14 @@ class RaceCalculator {
     }
 
     /* =============================================================================
-     * PROVE LIBERE — simula la sessione di practice. Ritorna feedback sul setup
-     * e un "setupConfidence" 0..1 che può influenzare il morale / la qualifica.
-     * Inoltre svela una stima del potenziale reale (per scouting integrato).
+     * PRACTICE — simulates the practice session. Returns setup feedback and a
+     * "setupConfidence" 0..1 that can influence morale / qualifying.
+     * It also reveals an estimate of the real potential (for integrated scouting).
      * ========================================================================== */
     simulatePractice(championshipId, options = {}) {
         const cfg = (typeof CHAMPIONSHIPS !== "undefined")
             ? CHAMPIONSHIPS[championshipId] : null;
-        if (!cfg) throw new Error(`RaceCalculator: championship '${championshipId}' non trovato`);
+        if (!cfg) throw new Error(`RaceCalculator: championship '${championshipId}' not found`);
 
         const teams = (typeof ALL_TEAMS !== "undefined") ? (ALL_TEAMS[championshipId] || []) : [];
         const track = (typeof getTrack === "function" && options.trackId)
@@ -144,7 +144,7 @@ class RaceCalculator {
             }
         }
 
-        // Simula 10-15 giri di practice: rileva il ritmo e la consistenza
+        // Simulate 10-15 practice laps: detect pace and consistency
         return entrants.map(e => {
             const d = e.driver;
             const laps = 10 + Math.floor(this._rand() * 6);
@@ -152,18 +152,18 @@ class RaceCalculator {
             for (let l = 0; l < laps; l++) {
                 let lt = baseLapMs / Math.max(0.3, e.rawPace);
                 lt *= (1 + this._randRange(-0.03, 0.03));
-                // miglioramento col setup (fuelTyreMgmt = feedback del pilota)
+                // setup improvement (fuelTyreMgmt = driver feedback)
                 lt *= (1 - 0.002 * this._stat(d, "fuelTyreMgmt") * (l / laps));
                 if (lt < bestLap) bestLap = lt;
                 totalConsistency += lt;
             }
             const avgLap = totalConsistency / laps;
-            // setupConfidence: quanto il team ha trovato un buon setup
+            // setupConfidence: how well the team found a good setup
             const staff = e.team.staff || {};
             const setupConfidence = this._clamp01(
                 0.4 + 0.3 * ((staff.mechanics || 50) / 100) + 0.2 * this._stat(d, "fuelTyreMgmt") + this._randRange(-0.1, 0.1)
             );
-            // stima potenziale visibile (per scouting: più alto se hiddenPotential alto)
+            // visible potential estimate (for scouting: higher if hiddenPotential is high)
             const potentialHint = d.hiddenPotential
                 ? this._clamp01(d.hiddenPotential * (0.85 + 0.3 * this._rand()))
                 : null;
@@ -180,71 +180,71 @@ class RaceCalculator {
     }
 
     /* =============================================================================
-     * ENTRY POINT PUBBLICO
-     * Restituisce un oggetto risultato completo per l'evento.
+     * PUBLIC ENTRY POINT
+     * Returns a complete result object for the event.
      *   options:
      *     weather     -> "dry" | "wet" | "mixed"
      *     surface     -> (rally/raid) "asphalt"|"gravel"|"snow"|"sand"|"dirt"
-     *     nightStage  -> bool (endurance notturna)
-     *     grid        -> array di driverId ordinati (dalla qualifica) per forzare
-     *                    l'ordine di partenza invece di calcolarlo internamente
+     *     nightStage  -> bool (night endurance)
+     *     grid        -> ordered array of driverIds (from qualifying) to force
+     *                    the starting order instead of computing it internally
      * ========================================================================== */
     simulateEvent(championshipId, options = {}) {
         const cfg = (typeof CHAMPIONSHIPS !== "undefined")
             ? CHAMPIONSHIPS[championshipId]
             : null;
-        if (!cfg) throw new Error(`RaceCalculator: championship '${championshipId}' non trovato`);
+        if (!cfg) throw new Error(`RaceCalculator: championship '${championshipId}' not found`);
 
-        // partecipanti = tutti i piloti di tutti i team del campionato
+        // participants = all drivers of all teams in the championship
         const teams = (typeof ALL_TEAMS !== "undefined") ? (ALL_TEAMS[championshipId] || []) : [];
-        if (teams.length === 0) throw new Error(`Nessun team per '${championshipId}'`);
+        if (teams.length === 0) throw new Error(`No teams for '${championshipId}'`);
 
         const participants = [];
         for (const team of teams) {
             for (const driver of team.drivers) {
                 participants.push({
                     driver, team,
-                    rawPace: 0,        // ritmo base
-                    tyreWear: 0,       // 0..1 accumulo degrado
-                    fuelOrEnergy: 1.0, // 1.0 = pieno
-                    stamina: 1.0,      // 1.0 = fresco (endurance)
-                    damage: 0,         // 0..1 danni accumulati (rally/raid)
-                    timeMs: 0,         // tempo totale (Time scoring)
-                    styleScore: 0,     // punteggio giudici (JudgeStyle scoring)
-                    notes: [],         // eventi narrativi per il log di gara
-                    timeline: [],      // [{t, progress}] per animazione canvas
+                    rawPace: 0,        // base pace
+                    tyreWear: 0,       // 0..1 wear accumulation
+                    fuelOrEnergy: 1.0, // 1.0 = full
+                    stamina: 1.0,      // 1.0 = fresh (endurance)
+                    damage: 0,         // 0..1 accumulated damage (rally/raid)
+                    timeMs: 0,         // total time (Time scoring)
+                    styleScore: 0,     // judge score (JudgeStyle scoring)
+                    notes: [],         // narrative events for the race log
+                    timeline: [],      // [{t, progress}] for canvas animation
                 });
             }
         }
 
-        // risolve il tracciato dell'evento (da options.trackId o calendario)
+        // resolve the event track (from options.trackId or calendar)
         const track = (typeof getTrack === "function" && options.trackId)
             ? getTrack(options.trackId)
             : null;
 
-        // --- INSTRADAMENTO PRINCIPALE per raceType ---
-        // Ogni raceType ha il proprio runner. Tutti leggono cfg + features,
-        // nessuno sa quale campionato stia girando.
+        // --- MAIN DISPATCH by raceType ---
+        // Each raceType has its own runner. All read cfg + features,
+        // none knows which championship is running.
         switch (cfg.raceType) {
             case "CircuitRace":   this._runCircuitRace(cfg, participants, options, track); break;
             case "EnduranceRace": this._runEnduranceRace(cfg, participants, options, track); break;
             case "StageRally":    this._runStageRally(cfg, participants, options, track); break;
             case "MarathonRaid":  this._runMarathonRaid(cfg, participants, options, track); break;
-            // Futuri raceType: "OvalRace","JudgeStyle","SprintOffroad"...
+            // Future raceTypes: "OvalRace","JudgeStyle","SprintOffroad"...
             default:
-                throw new Error(`RaceCalculator: raceType '${cfg.raceType}' non gestito`);
+                throw new Error(`RaceCalculator: raceType '${cfg.raceType}' not handled`);
         }
 
-        // --- CLASSIFICA FINALE (Time o JudgeStyle) ---
+        // --- FINAL CLASSIFICATION (Time or JudgeStyle) ---
         const results = this._buildFinalClassification(cfg, participants);
         return {
             championshipId,
             championshipName: cfg.name,
             raceType: cfg.raceType,
             options,
-            track,                                     // per il renderer canvas
+            track,                                     // for the canvas renderer
             results,
-            timelines: participants.map(p => ({        // per l'animazione canvas
+            timelines: participants.map(p => ({        // for canvas animation
                 driverId: p.driver.id,
                 driver: p.driver.name,
                 teamId: p.team.id,
@@ -256,15 +256,15 @@ class RaceCalculator {
     }
 
     /* =============================================================================
-     * MODULO: RITMO BASE (comune a tutti i raceType)
-     * Traduce le stat del pilota + livello del team in un "pace score" 0..1.
-     * La potenza del team influenza il ritmo: aereo/motore/meccanici.
+     * MODULE: BASE PACE (common to all raceTypes)
+     * Translates driver stats + team level into a "pace score" 0..1.
+     * Team power influences pace: aero/engine/mechanics.
      * ========================================================================== */
     buildBasePace(cfg, entrant, options) {
         const d = entrant.driver;
         const team = entrant.team;
 
-        // media pesata stat del pilota
+        // weighted average of driver stats
         const driverPace =
             this._stat(d, "pace")            * 0.45 +
             this._stat(d, "consistency")     * 0.20 +
@@ -272,20 +272,20 @@ class RaceCalculator {
             this._stat(d, "qualifying")      * 0.10 +
             this._stat(d, "wetPerformance")  * 0.10;
 
-        // contributo del team (sviluppo reparti) normalizzato 0..1
+        // team contribution (department development) normalized 0..1
         const staff = team.staff || {};
         const teamPace =
             (staff.aero || 50) / 100 * 0.40 +
             (staff.engine || 50) / 100 * 0.40 +
             (staff.mechanics || 50) / 100 * 0.20;
 
-        // presto: il pilota è il 65%, la macchina il 35% (regolabile)
+        // balance: driver is 65%, car is 35% (adjustable)
         let pace = driverPace * 0.65 + teamPace * 0.35;
-        // powerToWeight: discipline ad alta potenza (Drag, NASCAR) enfatizzano
-        // il divario prestazionale netto tra contendenti (1.0 = neutro).
+        // powerToWeight: high-power disciplines (Drag, NASCAR) emphasize
+        // the net performance gap between contenders (1.0 = neutral).
         pace *= (0.97 + 0.03 * (cfg.physicsModifiers.powerToWeight || 1.0));
 
-        // penalità per meteo bagnato: pesa la wetPerformance del pilota
+        // wet weather penalty: weighs driver wetPerformance
         if (options.weather === "wet") {
             pace *= (0.7 + 0.3 * this._stat(d, "wetPerformance"));
         }
@@ -293,7 +293,7 @@ class RaceCalculator {
             pace *= (0.88 + 0.12 * this._stat(d, "wetPerformance"));
         }
 
-        // morale basso abbassa lievemente il rendimento (metagame)
+        // low morale slightly lowers performance (metagame)
         pace *= (0.9 + 0.1 * ((d.morale || 75) / 100));
 
         entrant.rawPace = this._clamp01(pace);
@@ -301,15 +301,15 @@ class RaceCalculator {
     }
 
     /* =============================================================================
-     * RUNNER: CircuitRace  (F1, MotoGP, futuri: NASCAR, IndyCar, WTCC)
-     * Gara in pista con gli altri. Moduli attivi in base a cfg.features.
+     * RUNNER: CircuitRace  (F1, MotoGP, future: NASCAR, IndyCar, WTCC)
+     * On-track racing. Active modules depend on cfg.features.
      * ========================================================================== */
     _runCircuitRace(cfg, participants, options, track) {
-        const laps = this._estimateLaps(cfg, track);  // nr. giri dal tracciato/distanza
+        const laps = this._estimateLaps(cfg, track);  // nr. of laps from track/distance
 
-        // qualifica: ordina per pace+qualifying -> griglia. Se options.grid
-        // è stato fornito (dalla sessione di qualifica separata), ordina i
-        // partecipanti secondo quell'ordine invece di ricalcolarlo.
+        // qualifying: sort by pace+qualifying -> grid. If options.grid
+        // was provided (from the separate qualifying session), sort the
+        // participants according to that order instead of recomputing it.
         participants.forEach(p => this.buildBasePace(cfg, p, options));
         let grid;
         if (Array.isArray(options.grid) && options.grid.length > 0) {
@@ -322,10 +322,10 @@ class RaceCalculator {
               - (a.rawPace + this._stat(a.driver, "qualifying") * 0.1));
         }
 
-        // tempo base per giro di riferimento (ms) — track-aware
+        // base reference lap time (ms) — track-aware
         const baseLapMs = this._baseLapTimeMs(cfg, track);
 
-        // fattori tracciato (0..1 con fallback neutro)
+        // track factors (0..1 with neutral fallback)
         const tOver = track && typeof track.overtakingDifficulty === "number" ? track.overtakingDifficulty : 0.3;
         const tTyre = track && typeof track.tyreStress === "number" ? track.tyreStress : 0.5;
         const tElev = track && typeof track.elevationChange === "number" ? track.elevationChange : 0.3;
@@ -333,105 +333,105 @@ class RaceCalculator {
         const tDrs = track && typeof track.drsZones === "number" ? track.drsZones : 0;
 
         for (const entrant of participants) {
-            // tempo totale iniziale dal ritmo puro
+            // initial total time from pure pace
             let totalTime = 0;
             let tyreWear = 0;
-            // griglia: chi parte indietro ha un "progress" iniziale negativo
-            // (vedi dopo come compensiamo per la visualizzazione). La timeline
-            // campiona progress (0..1 = frazione di giro sul circuito chiuso)
-            // ogni giro, così il renderer può animare il movimento.
+            // grid: those starting at the back have a negative initial "progress"
+            // (see below how we compensate for visualization). The timeline
+            // samples progress (0..1 = fraction of a lap on the closed circuit)
+            // every lap, so the renderer can animate movement.
             const gridSlot = grid.indexOf(entrant);
-            let cumulativeProgress = -gridSlot * 0.004; // piccolo distacco alla partenza
+            let cumulativeProgress = -gridSlot * 0.004; // small gap at the start
 
             for (let lap = 1; lap <= laps; lap++) {
-                let lapTime = baseLapMs / entrant.rawPace; // pace alto = giro più veloce
+                let lapTime = baseLapMs / entrant.rawPace; // high pace = faster lap
 
-                // --- MODULO TRAFFICO (se features.traffic true) ---
+                // --- TRAFFIC MODULE (if features.traffic true) ---
                 if (cfg.features.traffic) {
                     lapTime = this._applyTraffic(cfg, entrant, lapTime, grid, lap, tOver);
                 }
 
-                // --- MODULO GOMME (se features.tyreWear true) ---
+                // --- TYRE MODULE (if features.tyreWear true) ---
                 if (cfg.features.tyreWear) {
-                    // più giri fai, più la gomma si degrada e il giro rallenta
-                    // il degrado è modulato dal tyreStress del tracciato (Suzuka alta)
+                    // the more laps you do, the more the tyre degrades and the lap slows
+                    // degradation is modulated by the track's tyreStress (Suzuka high)
                     tyreWear += this._tyreWearPerLap(cfg, entrant) * (0.6 + 0.8 * tTyre);
-                    // effetto del degrado sul tempo: fino a +6% con gomma andata
+                    // wear effect on time: up to +6% with worn tyres
                     lapTime *= (1 + 0.06 * tyreWear * cfg.tyreRules.degradationCurve);
-                    // bonus gestione conservativa del pilota
+                    // conservative management bonus from the driver
                     lapTime *= (1 - 0.02 * this._stat(entrant.driver, "fuelTyreMgmt"));
 
-                    // --- CEDIMENTO GOMMA ISTANTANEO (suddenFailureProb) ---
-                    // La probabilità scala col degrado accumulato: gomma fresca non cede.
+                    // --- INSTANT TYRE FAILURE (suddenFailureProb) ---
+                    // Probability scales with accumulated wear: fresh tyre won't fail.
                     if (tyreWear > 0.5 &&
                         this._rand() < (cfg.tyreRules.suddenFailureProb || 0) * 0.1 * tyreWear) {
                         if (this._rand() < 0.4) {
                             entrant.timeMs = Infinity;
-                            entrant.notes.push({lap, type:"TYRE_FAIL", msg:"Cedimento gomma: ritiro"});
+                            entrant.notes.push({lap, type:"TYRE_FAIL", msg:"Tyre failure: retirement"});
                             break;
                         } else {
                             lapTime *= 1.20;
-                            entrant.notes.push({lap, type:"TYRE_BLIST", msg:"Gonfiatura gomma: giro lento"});
+                            entrant.notes.push({lap, type:"TYRE_BLIST", msg:"Tyre blistering: slow lap"});
                         }
                     }
 
-                    // --- PIT STOP: se il degrado supera la soglia e il pit è previsto ---
+                    // --- PIT STOP: if wear exceeds threshold and pit is provided ---
                     if (tyreWear > 0.75 && (cfg.tyreRules.pitLossSeconds || 0) > 0) {
                         lapTime += cfg.tyreRules.pitLossSeconds * 1000;
-                        tyreWear = 0.15; // gomme nuove ma non perfette
-                        entrant.notes.push({lap, type:"PIT", msg:"Pit stop: cambio gomme"});
+                        tyreWear = 0.15; // new tyres but not perfect
+                        entrant.notes.push({lap, type:"PIT", msg:"Pit stop: tyre change"});
                     }
                 }
 
-                // --- DISELIVELLO: tracciati collinosi (Spa) premiano carControl/stamina ---
+                // --- ELEVATION: hilly tracks (Spa) reward carControl/stamina ---
                 if (tElev > 0.1) {
                     lapTime *= (1 + 0.03 * tElev * (1 - this._stat(entrant.driver, "carControl", 0.7)));
                 }
 
-                // --- EFFETTO CARBURANTE/QUOTA (Interlagos, Fuji: alta quota) ---
-                // Alta quota = meno potenza ma anche più impatto del peso carburante.
-                // fuelTyreMgmt aiuta a gestire il consumo.
+                // --- FUEL/ALTITUDE EFFECT (Interlagos, Fuji: high altitude) ---
+                // High altitude = less power but also more impact of fuel weight.
+                // fuelTyreMgmt helps manage consumption.
                 if (tFuel > 0.1) {
                     const fuelLoadFactor = (1 - (lap - 1) / laps) * tFuel;
                     lapTime *= (1 + 0.025 * fuelLoadFactor * (1 - 0.5 * this._stat(entrant.driver, "fuelTyreMgmt")));
                 }
 
-                // --- MODULO DRS / SLIPSTREAM (se drsBoost > 0) ---
-                // Le zone DRS del tracciato aumentano la probabilità/efficacia del boost.
+                // --- DRS / SLIPSTREAM MODULE (if drsBoost > 0) ---
+                // DRS zones of the track increase the probability/effectiveness of the boost.
                 if (cfg.physicsModifiers.drsBoost > 0 && lap > 2) {
-                    const drsChance = 0.25 + 0.12 * tDrs; // più zone = più occasioni
+                    const drsChance = 0.25 + 0.12 * tDrs; // more zones = more opportunities
                     if (this._rand() < drsChance) {
                         const boost = cfg.physicsModifiers.drsBoost * (0.5 + 0.25 * tDrs);
                         lapTime *= (1 - boost);
                     }
                 }
 
-                // --- ENERGIA/CARBURANTE (es. FE) ---
+                // --- ENERGY/FUEL (e.g. FE) ---
                 if (cfg.features.fuelOrEnergy) {
                     entrant.fuelOrEnergy = Math.max(0, entrant.fuelOrEnergy - 1 / laps);
                     lapTime *= (1 + 0.03 * (1 - entrant.fuelOrEnergy));
                 }
 
-                // --- CADUTA/CONTATTO (Moto/Baja) ---
+                // --- CRASH/CONTACT (Moto/Baja) ---
                 if (cfg.driverRules.crashRiskFactor > 1.0 &&
                     this._rand() < cfg.driverRules.crashRiskFactor * 0.002 * (1 - this._stat(entrant.driver, "consistency"))) {
-                    // caduta: grosso ritardo o ritiro
+                    // crash: big delay or retirement
                     if (this._rand() < 0.3) {
-                        entrant.timeMs = Infinity; // ritiro
-                        entrant.notes.push({lap, type:"CRASH", msg:"Caduta/ritiro"});
+                        entrant.timeMs = Infinity; // retirement
+                        entrant.notes.push({lap, type:"CRASH", msg:"Crash/retirement"});
                         break;
                     } else {
                         lapTime *= 1.15;
-                        entrant.notes.push({lap, type:"MISTAKE", msg:"Errore/caduta lieve"});
+                        entrant.notes.push({lap, type:"MISTAKE", msg:"Minor crash/error"});
                     }
                 }
 
-                // micro-varianza per realismo (consistency la riduce)
+                // micro-variance for realism (consistency reduces it)
                 const variance = (1 - this._stat(entrant.driver, "consistency")) * 0.02;
                 lapTime *= (1 + this._randRange(-variance, variance));
 
                 totalTime += lapTime;
-                // campiona la timeline per l'animazione (progress 0..1 = giro)
+                // sample the timeline for animation (progress 0..1 = lap)
                 cumulativeProgress += 1;
                 entrant.timeline.push({ t: totalTime, progress: cumulativeProgress });
             }
@@ -442,8 +442,8 @@ class RaceCalculator {
 
     /* =============================================================================
      * RUNNER: EnduranceRace  (WEC, IMSA)
-     * Come CircuitRace + driver stints (stamina) + ciclo giorno/notte +
-     * traffico multiclasse. La gara è divisa in "stints" temporali.
+     * Like CircuitRace + driver stints (stamina) + day/night cycle +
+     * multiclass traffic. The race is divided into timed "stints".
      * ========================================================================== */
     _runEnduranceRace(cfg, participants, options, track) {
         participants.forEach(p => this.buildBasePace(cfg, p, options));
@@ -455,7 +455,7 @@ class RaceCalculator {
         const baseLapMs = this._baseLapTimeMs(cfg, track);
         let grid = [...participants].sort((a, b) => b.rawPace - a.rawPace);
 
-        // fattori tracciato (0..1 con fallback neutro)
+        // track factors (0..1 with neutral fallback)
         const tTyre = track && typeof track.tyreStress === "number" ? track.tyreStress : 0.5;
         const tElev = track && typeof track.elevationChange === "number" ? track.elevationChange : 0.3;
         const tFuel = track && typeof track.fuelEffect === "number" ? track.fuelEffect : 0.3;
@@ -471,21 +471,21 @@ class RaceCalculator {
             while (elapsedMinutes < totalMinutes) {
                 let lapTime = baseLapMs / entrant.rawPace;
 
-                // --- modulo stamina: cala col tempo, penalizza chi ha poca stamina ---
+                // --- stamina module: drops over time, penalizes low stamina ---
                 if (cfg.features.driverStints) {
                     entrant.stamina = Math.max(0.2, entrant.stamina - cfg.driverRules.staminaDrainRate * 0.0015);
                     lapTime *= (1 + 0.04 * (1 - this._stat(entrant.driver, "stamina", 0.8)));
                     stintMinutes += baseLapMs / 60000;
-                    // cambio pilota obbligatorio dopo minStintMinutes
+                    // mandatory driver swap after minStintMinutes
                     if (stintMinutes >= cfg.driverRules.minStintMinutes && this._rand() < 0.02) {
-                        entrant.stamina = 1.0; // "entra" un compagno fresco
+                        entrant.stamina = 1.0; // a fresh teammate "gets in"
                         stintMinutes = 0;
                         lapTime += cfg.tyreRules.pitLossSeconds * 1000;
-                        entrant.notes.push({type:"DRIVER_SWAP", msg:"Cambio pilota ai box"});
+                        entrant.notes.push({type:"DRIVER_SWAP", msg:"Driver swap in the pits"});
                     }
                 }
 
-                // --- ciclo giorno/notte: in notturna cala il rendimento ---
+                // --- day/night cycle: at night performance drops ---
                 if (cfg.features.dayNightCycle) {
                     const hour = (elapsedMinutes / 60) % 24;
                     const isNight = (hour >= 20 || hour < 6);
@@ -494,19 +494,19 @@ class RaceCalculator {
                     }
                 }
 
-                // --- traffico multiclasse: chi è più lento fa da tappo ---
+                // --- multiclass traffic: slower cars act as mobile chicanes ---
                 if (cfg.features.multiClassTraffic && this._rand() < 0.2) {
                     lapTime *= 1.03;
                 }
 
-                // --- gomme (modulate dal tyreStress del tracciato) ---
+                // --- tyres (modulated by track tyreStress) ---
                 if (cfg.features.tyreWear) {
                     tyreWear += this._tyreWearPerLap(cfg, entrant) * (0.6 + 0.8 * tTyre);
                     lapTime *= (1 + 0.05 * tyreWear * cfg.tyreRules.degradationCurve);
                     lapTime *= (1 - 0.02 * this._stat(entrant.driver, "fuelTyreMgmt"));
                 }
 
-                // --- dislivello (Spa, Sebring) ---
+                // --- elevation (Spa, Sebring) ---
                 if (tElev > 0.1) {
                     lapTime *= (1 + 0.03 * tElev * (1 - this._stat(entrant.driver, "carControl", 0.7)));
                 }
@@ -526,8 +526,8 @@ class RaceCalculator {
 
     /* =============================================================================
      * RUNNER: StageRally  (WRC, WRC2)
-     * Nessun duello diretto: gara a tempo su prove speciali (SS) sequenziali.
-     * Il tempo dipende da: stat base + superficie + lettura note + danni accumulati.
+     * No direct duel: time trial on sequential special stages (SS).
+     * Time depends on: base stats + surface + pace notes reading + accumulated damage.
      * ========================================================================== */
     _runStageRally(cfg, participants, options, track) {
         const stages = cfg.eventStructure.stages || 12;
@@ -535,11 +535,11 @@ class RaceCalculator {
 
         for (const entrant of participants) {
             let totalTime = 0;
-            // offset di partenza: nei rally si parte a intervalli, simulato come
-            // un piccolo distacco iniziale nella progressione della SS.
+            // start offset: in rallies you start at intervals, simulated as
+            // a small initial gap in the SS progression.
             const startOffset = participants.indexOf(entrant) * 0.002;
             for (let s = 1; s <= stages; s++) {
-                // la superficie può variare tra SS (opzioni del calendario)
+                // the surface can vary between SSs (calendar options)
                 const surface = options.surfaceList
                     ? options.surfaceList[(s - 1) % options.surfaceList.length]
                     : (options.surface || "gravel");
@@ -547,49 +547,49 @@ class RaceCalculator {
                 const stageStart = totalTime;
                 let stageTime = this._stageTimeMs(cfg, surface, entrant, track);
 
-                // --- lettura note del navigatore (stat speciale rally) ---
+                // --- co-driver pace notes reading (rally-specific stat) ---
                 stageTime *= (1.1 - 0.1 * this._stat(entrant.driver, "paceNotesReading"));
                 stageTime *= (1.1 - 0.1 * this._stat(entrant.driver, "carControl", 0.8));
 
-                // --- danni accumulati: impattano le SS successive ---
+                // --- accumulated damage: impacts subsequent SSs ---
                 if (cfg.features.cumulativeDamage) {
                     stageTime *= (1 + 0.12 * entrant.damage);
-                    // rischio di danno ogni SS, ridotto da carControl
+                    // risk of damage each SS, reduced by carControl
                     if (this._rand() < 0.06 * (1 - this._stat(entrant.driver, "carControl", 0.8))) {
                         const dmg = this._randRange(0.05, 0.25);
                         entrant.damage = Math.min(1, entrant.damage + dmg);
-                        entrant.notes.push({stage:s, type:"DAMAGE", msg:`Danno accumulato (+${(dmg*100|0)}%)`});
+                        entrant.notes.push({stage:s, type:"DAMAGE", msg:`Accumulated damage (+${(dmg*100|0)}%)`});
                     }
                 }
 
-                // --- meteo micro-localizzato (può piovere solo su metà SS) ---
+                // --- micro-localized weather (it may rain on only half an SS) ---
                 if (cfg.weatherRules.localizedPossible && this._rand() < 0.25) {
                     const wet = cfg.weatherRules.wetGripMultiplier;
                     stageTime *= (1 + 0.05 * (1 - wet) * (1 - this._stat(entrant.driver, "wetPerformance")));
-                    entrant.notes.push({stage:s, type:"WEATHER", msg:"Pioggia localizzata sulla SS"});
+                    entrant.notes.push({stage:s, type:"WEATHER", msg:"Localized rain on the SS"});
                 }
 
-                // varianza legata alla consistenza
+                // consistency-based variance
                 const variance = (1 - this._stat(entrant.driver, "consistency")) * 0.03;
                 stageTime *= (1 + this._randRange(-variance, variance));
 
                 totalTime += stageTime;
-                // timeline per rally: progress 0..1 sulla SS corrente. Campioniamo
-                // a inizio e fine di ogni SS così il renderer può interpolare.
+                // timeline for rally: progress 0..1 on the current SS. We sample
+                // at the start and end of each SS so the renderer can interpolate.
                 const stageProgressStart = (s - 1) / stages + startOffset;
                 const stageProgressEnd = s / stages;
                 entrant.timeline.push({ t: stageStart, progress: stageProgressStart });
                 entrant.timeline.push({ t: totalTime, progress: stageProgressEnd });
             }
             entrant.timeMs = totalTime;
-            entrant.tyreWear = 0.5; // indicativo
+            entrant.tyreWear = 0.5; // indicative
         }
     }
 
     /* =============================================================================
      * RUNNER: MarathonRaid  (Dakar)
-     * Come StageRally + NAVIGAZIONE (waypoint nascosti) + riparazioni notturne.
-     * L'errore di rotta = penalità ENORMI (fattore primario della disciplina).
+     * Like StageRally + NAVIGATION (hidden waypoints) + overnight repairs.
+     * Navigation error = HUGE penalty (primary factor of the discipline).
      * ========================================================================== */
     _runMarathonRaid(cfg, participants, options, track) {
         const stages = cfg.eventStructure.stages || 12;
@@ -597,7 +597,7 @@ class RaceCalculator {
 
         for (const entrant of participants) {
             let totalTime = 0;
-            let partsAvailable = 100; // pezzi di riparazione (gestione metagame)
+            let partsAvailable = 100; // repair parts (metagame management)
             const startOffset = participants.indexOf(entrant) * 0.002;
 
             for (let s = 1; s <= stages; s++) {
@@ -609,53 +609,53 @@ class RaceCalculator {
                 let stageTime = this._stageTimeMs(cfg, surface, entrant, track);
                 stageTime *= (1.1 - 0.1 * this._stat(entrant.driver, "carControl", 0.8));
 
-                // --- NAVIGAZIONE: cuore del raid ---
+                // --- NAVIGATION: the heart of the raid ---
                 if (cfg.features.navigation) {
                     const navSkill = this._stat(entrant.driver, "navigationSkill");
                     const desertExp = this._stat(entrant.driver, "desertExperience", navSkill);
-                    // probabilità di errore di rotta: inversa alla skill
+                    // probability of navigation error: inverse to skill
                     if (this._rand() < (1 - navSkill) * 0.5) {
-                        // errore di navigazione: penalità enorme (minuti→ore)
+                        // navigation error: huge penalty (minutes→hours)
                         const penaltyMin = this._randRange(2, 30) * (1.3 - desertExp);
                         stageTime += penaltyMin * 60000;
-                        entrant.notes.push({stage:s, type:"NAV_ERROR", msg:`Errore di rotta: +${penaltyMin.toFixed(1)} min`});
+                        entrant.notes.push({stage:s, type:"NAV_ERROR", msg:`Navigation error: +${penaltyMin.toFixed(1)} min`});
                     }
                 }
 
-                // --- danni cumulativi + rottura meccanica istantanea ---
+                // --- cumulative damage + instant mechanical breakdown ---
                 if (cfg.features.cumulativeDamage) {
                     stageTime *= (1 + 0.15 * entrant.damage);
-                    // rottura grave (suddenFailureProb elevata in raid)
+                    // severe breakdown (high suddenFailureProb in raid)
                     if (this._rand() < cfg.tyreRules.suddenFailureProb) {
                         const dmg = this._randRange(0.2, 0.6);
                         entrant.damage = Math.min(1, entrant.damage + dmg);
-                        stageTime += dmg * 30 * 60000; // decine di minuti persi
-                        entrant.notes.push({stage:s, type:"BREAKDOWN", msg:`Rottura meccanica grave (+${(dmg*30|0)} min)`});
+                        stageTime += dmg * 30 * 60000; // tens of minutes lost
+                        entrant.notes.push({stage:s, type:"BREAKDOWN", msg:`Severe mechanical breakdown (+${(dmg*30|0)} min)`});
                     }
                 }
 
-                // --- riparazione notturna: usa i pezzi per abbassare il danno ---
+                // --- overnight repair: use parts to reduce damage ---
                 if (cfg.features.overnightRepair && entrant.damage > 0 && partsAvailable > 0) {
                     const repair = Math.min(entrant.damage, 0.4, partsAvailable / 100);
                     entrant.damage -= repair;
                     partsAvailable -= repair * 100;
                     if (repair > 0.01) {
-                        entrant.notes.push({stage:s, type:"REPAIR", msg:`Riparazione notturna (-${(repair*100|0)}% danno)`});
+                        entrant.notes.push({stage:s, type:"REPAIR", msg:`Overnight repair (-${(repair*100|0)}% damage)`});
                     }
                 }
 
-                // tempesta di sabbia localizzata
+                // localized sandstorm
                 if (cfg.weatherRules.localizedPossible && this._rand() < 0.15) {
                     stageTime *= 1.1;
-                    entrant.notes.push({stage:s, type:"WEATHER", msg:"Tempesta di sabbia"});
+                    entrant.notes.push({stage:s, type:"WEATHER", msg:"Sandstorm"});
                 }
 
-                // varianza: il raid è la disciplina più caotica
+                // variance: raid is the most chaotic discipline
                 const variance = (1 - this._stat(entrant.driver, "consistency")) * 0.05;
                 stageTime *= (1 + this._randRange(-variance, variance));
 
                 totalTime += stageTime;
-                // timeline per raid: progress 0..1 frazionato per tappa
+                // timeline for raid: progress 0..1 split per stage
                 const stageProgressStart = (s - 1) / stages + startOffset;
                 const stageProgressEnd = s / stages;
                 entrant.timeline.push({ t: stageStart, progress: stageProgressStart });
@@ -666,8 +666,8 @@ class RaceCalculator {
     }
 
     /* =============================================================================
-     * CLASSIFICA FINALE
-     * Ordina per Time (crescente) o JudgeStyle (decrescente) e assegna punti.
+     * FINAL CLASSIFICATION
+     * Sorts by Time (ascending) or JudgeStyle (descending) and assigns points.
      * ========================================================================== */
     _buildFinalClassification(cfg, participants) {
         const scoring = (typeof SCORING_TABLES !== "undefined")
@@ -676,10 +676,10 @@ class RaceCalculator {
 
         let sorted;
         if (cfg.scoringType === "JudgeStyle") {
-            // Drift: punteggio stile decrescente
+            // Drift: descending style score
             sorted = [...participants].sort((a, b) => b.styleScore - a.styleScore);
         } else {
-            // Time: ascending, ritiri (Infinity) in fondo
+            // Time: ascending, retirements (Infinity) at the bottom
             sorted = [...participants].sort((a, b) => a.timeMs - b.timeMs);
         }
 
@@ -707,61 +707,61 @@ class RaceCalculator {
     }
 
     /* =============================================================================
-     * SOTTOMETODI AUSILIARI
+     * AUXILIARY SUB-METHODS
      * ========================================================================== */
 
-    // traffico: chi sta davanti rallenta chi sta dietro (dirty air) su CircuitRace.
-    // tOver = overtakingDifficulty del tracciato (0..1): alto = difficile sorpassare
-    // (Monaco), quindi chi resta dietro perde più tempo e non riesce a passare.
+    // traffic: the car ahead slows down the one behind (dirty air) on CircuitRace.
+    // tOver = track overtakingDifficulty (0..1): high = hard to overtake
+    // (Monaco), so those stuck behind lose more time and can't get past.
     _applyTraffic(cfg, entrant, lapTime, grid, lap, tOver = 0.3) {
         const idx = grid.indexOf(entrant);
         if (idx > 0 && this._rand() < 0.3) {
-            // segue qualcuno: dirty air riduce prestazioni ma aiuta sorpasso.
-            // Su circuiti dove si sorpassa poco (tOver alto) il danno del restare
-            // dietro è maggiore e il "recupero" minore.
+            // following someone: dirty air reduces performance but helps overtaking.
+            // On tracks where overtaking is hard (high tOver) the penalty of being
+            // behind is greater and the "recovery" is smaller.
             const dirtyAir = cfg.physicsModifiers.dirtyAirEffect;
             const trafficPenalty = 0.01 * dirtyAir * (0.5 + 1.5 * tOver);
-            const overtakeChance = 0.1 * (1 - tOver); // facile sorpasso -> più tentativi
+            const overtakeChance = 0.1 * (1 - tOver); // easy overtake -> more attempts
             if (this._rand() < overtakeChance) {
-                // sorpasso riuscito: bonus proporzionale a slipstreamEffect (NASCAR >> F1)
+                // successful overtake: bonus proportional to slipstreamEffect (NASCAR >> F1)
                 const slip = cfg.physicsModifiers.slipstreamEffect || 1.0;
                 lapTime *= (1 - 0.005 * slip);
             } else {
                 lapTime *= (1 + trafficPenalty);
             }
         }
-        // tolleranza al contatto: gomme che durano (NASCAR) = contatti frequenti
+        // contact tolerance: durable tyres (NASCAR) = frequent contact
         if (cfg.physicsModifiers.contactTolerance > 0.15 && this._rand() < 0.05) {
-            lapTime *= (1 - 0.005 * cfg.physicsModifiers.contactTolerance); // spinta da contatto
+            lapTime *= (1 - 0.005 * cfg.physicsModifiers.contactTolerance); // contact push
         }
         return lapTime;
     }
 
-    // degrado gomme per giro (dipende da regole categoria + stile pilota)
+    // tyre wear per lap (depends on category rules + driver style)
     _tyreWearPerLap(cfg, entrant) {
-        const base = 0.012; // ~1.2% a giro in condizioni neutre
-        const mgmt = this._stat(entrant.driver, "fuelTyreMgmt"); //保守 riduce il degrado
+        const base = 0.012; // ~1.2% per lap in neutral conditions
+        const mgmt = this._stat(entrant.driver, "fuelTyreMgmt"); // conservative reduces wear
         return base * (1.4 - mgmt) * cfg.tyreRules.degradationCurve / 1.5;
     }
 
-    // stima del numero di giri: se il tracciato è disponibile usa la sua lunghezza reale
+    // estimate of the number of laps: if the track is available use its real length
     _estimateLaps(cfg, track) {
         if (cfg.eventStructure.raceDistanceKm <= 0) return 50;
         if (track && track.lengthKm > 0) {
             return Math.max(5, Math.round(cfg.eventStructure.raceDistanceKm / track.lengthKm));
         }
-        // fallback: lunghezza giro media ipotetica per famiglia
+        // fallback: hypothetical average lap length per family
         const lapLen = { OpenWheel:5, Bike:4.5, Endurance:13, Rally:25, Raid:200 }[cfg.family] || 5;
         return Math.max(10, Math.round(cfg.eventStructure.raceDistanceKm / lapLen));
     }
 
-    // tempo base per giro: track-aware. Se il tracciato ha lapRecordSec, lo usa;
-    // altrimenti fallback per famiglia.
+    // base lap time: track-aware. If the track has lapRecordSec, use it;
+    // otherwise fallback per family.
     _baseLapTimeMs(cfg, track) {
         if (track && track.lapRecordSec > 0) {
-            return track.lapRecordSec * 1000; // secondi -> ms
+            return track.lapRecordSec * 1000; // seconds -> ms
         }
-        // fallback per famiglia (fattori legacy)
+        // fallback per family (legacy factors)
         const familyFactor = {
             OpenWheel: 95, Bike: 110, Endurance: 220, Rally: 600, Raid: 1800,
         };
@@ -769,29 +769,29 @@ class RaceCalculator {
         return factor * 1000;
     }
 
-    // durata in minuti di una gara endurance (WEC 6h/24h, derivato dalla distanza)
+    // duration in minutes of an endurance race (WEC 6h/24h, derived from distance)
     _enduranceMinutes(cfg) {
         if (cfg.eventStructure.raceDistanceKm >= 4000) return 24 * 60; // Le Mans 24h
         if (cfg.eventStructure.raceDistanceKm >= 2000) return 8 * 60;
         return 6 * 60;
     }
 
-    // tempo base di una prova speciale (SS) rally/raid: track-aware.
+    // base time of a special stage (SS) rally/raid: track-aware.
     _stageTimeMs(cfg, surface, entrant, track) {
         const grip = (cfg.surfaceRules.gripTable[surface] || 0.8);
-        // Se il tracciato esiste, usa il suo tempo di riferimento per calcolare
-        // il tempo di una SS di lunghezza track.lengthKm, poi scala col progress.
+        // If the track exists, use its reference time to calculate
+        // the time of an SS of track.lengthKm length, then scale with progress.
         let base;
         if (track && track.lapRecordSec > 0) {
             base = track.lapRecordSec * 1000;
         } else {
             base = this._baseLapTimeMs(cfg, null);
         }
-        // grip basso = tempo più alto
+        // low grip = higher time
         return base / (0.7 + 0.3 * grip) / Math.max(0.5, entrant.rawPace);
     }
 
-    // formattazione tempo: h:mm:ss.mmm per gare endurance (>60min), mm:ss.mmm altrimenti
+    // time formatting: h:mm:ss.mmm for endurance races (>60min), mm:ss.mmm otherwise
     _formatTime(ms) {
         if (ms === Infinity || !isFinite(ms)) return "DNF";
         const totalSec = ms / 1000;
@@ -808,7 +808,7 @@ class RaceCalculator {
 }
 
 /* =============================================================================
- * Istanza singleton pronta all'uso (UI la consuma come window.engine).
+ * Ready-to-use singleton instance (UI consumes it as window.engine).
  * ========================================================================== */
 const engine = new RaceCalculator();
 

@@ -2,7 +2,7 @@
  * ULTIMATE MOTORSPORT MANAGER
  * File: data/teams/f1Teams.js
  * -----------------------------------------------------------------------------
- * DATABASE FORMULA 1 (Stagione 2026)
+ * DATABASE FORMULA 1 (Season 2026)
  * ========================================================================== */
 
 const F1_TEAMS = [

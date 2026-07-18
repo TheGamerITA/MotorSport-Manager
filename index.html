@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="it">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -20,27 +20,27 @@
                         <div class="brand-sub">Master Control Room</div>
                     </div>
                 </div>
-                <button class="btn-ghost" id="btnQuitCareer" style="margin-left: 20px;">⏏ Torna al Menu</button>
+                <button class="btn-ghost" id="btnQuitCareer" style="margin-left: 20px;">⏏ Back to Menu</button>
                 <div class="global-stats" id="globalStats"></div>
             </header>
             
             <nav id="sidebar">
                 <button class="nav-btn active" data-view="race"><span class="nav-ico ico-race"></span> Weekend</button>
-                <button class="nav-btn" data-view="team"><span class="nav-ico ico-team"></span> Squadra</button>
+                <button class="nav-btn" data-view="team"><span class="nav-ico ico-team"></span> Team</button>
                 <button class="nav-btn" data-view="rnd"><span class="nav-ico ico-rnd"></span> R&D</button>
                 <button class="nav-btn" data-view="scout"><span class="nav-ico ico-scout"></span> Scouting</button>
-                <button class="nav-btn" data-view="finance"><span class="nav-ico ico-finance"></span> Finanze</button>
-                <button class="nav-btn" data-view="sponsors"><span class="nav-ico ico-finance"></span> Sponsor</button>
-                <button class="nav-btn" data-view="standings"><span class="nav-ico ico-standings"></span> Classifica</button>
-                <button class="nav-btn" data-view="calendar"><span class="nav-ico ico-calendar"></span> Calendario</button>
+                <button class="nav-btn" data-view="finance"><span class="nav-ico ico-finance"></span> Finance</button>
+                <button class="nav-btn" data-view="sponsors"><span class="nav-ico ico-finance"></span> Sponsors</button>
+                <button class="nav-btn" data-view="standings"><span class="nav-ico ico-standings"></span> Standings</button>
+                <button class="nav-btn" data-view="calendar"><span class="nav-ico ico-calendar"></span> Calendar</button>
             </nav>
 
             <main id="content">
                 <div id="view-race" class="view active">
                     <div class="panel-head">
-                        <h2>Simulazione Weekend</h2>
+                        <h2>Weekend Simulation</h2>
                         <div class="panel-actions">
-                            <button class="primary" id="simBtn">SIMULA PROSSIMA SESSIONE</button>
+                            <button class="primary" id="simBtn">SIMULATE NEXT SESSION</button>
                         </div>
                     </div>
                     <div class="meta-bar" id="raceMeta"></div>
@@ -51,12 +51,12 @@
                             <button class="btn-secondary" id="btn-play">Play</button>
                             <button class="btn-secondary" id="btn-pause">Pause</button>
                             <button class="btn-secondary" id="btn-reset">Reset</button>
-                            <button class="btn-secondary" id="btn-speed">Velocità: 1x</button>
+                            <button class="btn-secondary" id="btn-speed">Speed: 1x</button>
                         </div>
                     </div>
 
                     <div class="card">
-                        <h3>Risultati Sessione</h3>
+                        <h3>Session Results</h3>
                         <div class="table-wrap">
                             <table class="data-table" id="resultsTable">
                                 <thead></thead>
@@ -65,21 +65,21 @@
                         </div>
                     </div>
                     <div class="card">
-                        <h3>Log Eventi</h3>
+                        <h3>Event Log</h3>
                         <div class="log-box" id="raceLog"></div>
                     </div>
                 </div>
 
-                <div id="view-team" class="view"><div class="panel-head"><h2>La tua Squadra</h2></div><div class="grid-cards" id="teamContent"></div></div>
-                <div id="view-rnd" class="view"><div class="panel-head"><h2>Ricerca & Sviluppo</h2></div><div class="card" id="rndContent"></div></div>
-                <div id="view-scout" class="view"><div class="panel-head"><h2>Academy & Scouting</h2><button class="primary" id="scoutBtn">AVVIA SCOUTING (€50k)</button></div><div class="grid-cards" id="scoutContent"></div></div>
-                <div id="view-finance" class="view"><div class="panel-head"><h2>Gestione Finanziaria</h2></div><div id="financeContent"></div></div>
-                <div id="view-sponsors" class="view"><div class="panel-head"><h2>Gestione Sponsor</h2></div><div id="sponsorsContent"></div></div>
-                <div id="view-standings" class="view"><div class="panel-head"><h2>Classifica Campionato</h2></div><div id="standingsContent"></div></div>
-                <div id="view-calendar" class="view"><div class="panel-head"><h2>Calendario Stagione</h2></div><div id="calendarContent"></div></div>
+                <div id="view-team" class="view"><div class="panel-head"><h2>Your Team</h2></div><div class="grid-cards" id="teamContent"></div></div>
+                <div id="view-rnd" class="view"><div class="panel-head"><h2>Research & Development</h2></div><div class="card" id="rndContent"></div></div>
+                <div id="view-scout" class="view"><div class="panel-head"><h2>Academy & Scouting</h2><button class="primary" id="scoutBtn">START SCOUTING (€50k)</button></div><div class="grid-cards" id="scoutContent"></div></div>
+                <div id="view-finance" class="view"><div class="panel-head"><h2>Financial Management</h2></div><div id="financeContent"></div></div>
+                <div id="view-sponsors" class="view"><div class="panel-head"><h2>Sponsor Management</h2></div><div id="sponsorsContent"></div></div>
+                <div id="view-standings" class="view"><div class="panel-head"><h2>Championship Standings</h2></div><div id="standingsContent"></div></div>
+                <div id="view-calendar" class="view"><div class="panel-head"><h2>Season Calendar</h2></div><div id="calendarContent"></div></div>
             </main>
 
-            <footer id="statusbar"><span id="statusMsg">Pronto.</span><span>Ultimate Motorsport Manager v1.0</span></footer>
+            <footer id="statusbar"><span id="statusMsg">Ready.</span><span>Ultimate Motorsport Manager v1.0</span></footer>
         </div>
     </section>
 
@@ -129,11 +129,11 @@
                     RenderView.init('raceCanvas');
                 }
 
-                // Pulsante per tornare al menu
+                // Button to return to menu
                 const quitBtn = document.getElementById("btnQuitCareer");
                 if(quitBtn) {
                     quitBtn.onclick = () => {
-                        if(confirm("Vuoi tornare al menu principale? Il progresso è salvato.")) {
+                        if(confirm("Do you want to return to the main menu? Progress is saved.")) {
                             if (typeof CareerManager !== 'undefined') CareerManager.close();
                             if (typeof ScreenManager !== 'undefined') ScreenManager.show('start');
                             if (typeof StartScreen !== 'undefined') StartScreen.render();
@@ -146,8 +146,8 @@
                     if (typeof StartScreen !== 'undefined') StartScreen.render();
                 }
             } catch (e) { 
-                console.error("Errore di avvio:", e);
-                document.body.innerHTML = `<div style="color:red; padding:20px; font-family:monospace;">ERRORE DI AVVIO: ${e.message}<br>Controlla che tutti i file JS siano presenti nelle cartelle corrette.</div>`;
+                console.error("Startup error:", e);
+                document.body.innerHTML = `<div style="color:red; padding:20px; font-family:monospace;">STARTUP ERROR: ${e.message}<br>Check that all JS files are present in the correct folders.</div>`;
             }
         });
     </script>

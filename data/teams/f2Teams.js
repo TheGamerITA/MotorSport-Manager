@@ -2,7 +2,7 @@
  * ULTIMATE MOTORSPORT MANAGER
  * File: data/teams/f2Teams.js
  * -----------------------------------------------------------------------------
- * DATABASE FORMULA 2 (Stagione 2026)
+ * DATABASE FORMULA 2 (Season 2026)
  * ========================================================================== */
 
 const F2_TEAMS = [

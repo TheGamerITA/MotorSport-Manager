@@ -2,157 +2,157 @@
  * ULTIMATE MOTORSPORT MANAGER
  * File: data/categoryConfigs.js
  * -----------------------------------------------------------------------------
- * SCHEMA DATA-DRIVEN DELLE CATEGORIE (Enciclopedia dei Paradigmi di Gioco)
+ * DATA-DRIVEN CATEGORY SCHEMA (Encyclopedia of Game Paradigms)
  *
- * LA REGOLA D'ORO: il motore (coreSimulation.js) NON contiene MAI logica del
- * tipo "se è F1 fai questo". Ogni differenza tra campionati è espressa qui come
- * FLAG, MOLTIPLICATORE o REGOLA configurabile. Il Game Engine legge questi valori
- * e si comporta di conseguenza, rimanendo "stupido" e totalmente generico.
+ * THE GOLDEN RULE: the engine (coreSimulation.js) NEVER contains logic like
+ * "if it's F1 do this". Every difference between championships is expressed here
+ * as a FLAG, MULTIPLIER or configurable RULE. The Game Engine reads these values
+ * and behaves accordingly, remaining "dumb" and totally generic.
  *
- * Lo stesso schema `ChampionshipConfig` può descrivere Discipline futuri (NASCAR,
- * IndyCar, Formula E, Drift, Baja...) senza toccare una riga del motore.
+ * The same `ChampionshipConfig` schema can describe future disciplines (NASCAR,
+ * IndyCar, Formula E, Drift, Baja...) without touching a line of the engine.
  * ========================================================================== */
 
 /* -----------------------------------------------------------------------------
  * 1) SCHEMA / FACTORY
- * Restituisce un oggetto ChampionshipConfig normalizzato. I campi mancanti
- * vengono riempiti con default sicuri, così ogni campionato definisce SOLO
- * ciò che lo rende unico (configurazione dichiarativa).
+ * Returns a normalized ChampionshipConfig object. Missing fields are filled
+ * with safe defaults, so each championship defines ONLY what makes it unique
+ * (declarative configuration).
  *
- * Chiavi principali:
- *   id            -> chiave univoca (usata per lookup, salvataggi, path loghi)
- *   name          -> etichetta localizzata mostrata in UI
- *   family        -> macro-gruppo ("OpenWheel","Bike","Endurance","Rally","Raid"...)
- *   raceType      -> il grande instradatore del motore:
+ * Main keys:
+ *   id            -> unique key (used for lookup, saves, logo paths)
+ *   name          -> localized label shown in UI
+ *   family        -> macro-group ("OpenWheel","Bike","Endurance","Rally","Raid"...)
+ *   raceType      -> the engine's main router:
  *                    "CircuitRace" | "EnduranceRace" | "StageRally" | "MarathonRaid"
- *                    (estendibile in futuro con "OvalRace","JudgeStyle","SprintOffroad")
- *   physicsModifiers -> moltiplicatori che alterano la fisica generica
- *   tyreRules     -> regole gommistica (degrado, compound, blanket)
- *   driverRules   -> stint obbligatori, stamina, peso pilota
- *   surfaceRules  -> asfalto/terra/neve + loro impatto (rally/raid)
- *   weatherRules  -> comportamento meteo e micro-localizzazione
- *   scoringType   -> "Time" (normale) o "JudgeStyle" (Drift)
- *   features      -> mappa di FLAG ON/OFF che attivano/disattivano sottosistemi
+ *                    (extensible in the future with "OvalRace","JudgeStyle","SprintOffroad")
+ *   physicsModifiers -> multipliers that alter generic physics
+ *   tyreRules     -> tyre rules (degradation, compound, blankets)
+ *   driverRules   -> mandatory stints, stamina, rider weight
+ *   surfaceRules  -> asphalt/dirt/snow + their impact (rally/raid)
+ *   weatherRules  -> weather behavior and micro-localization
+ *   scoringType   -> "Time" (normal) or "JudgeStyle" (Drift)
+ *   features      -> map of ON/OFF FLAGS that enable/disable subsystems
  * ========================================================================== */
 function ChampionshipConfig(cfg) {
     return Object.assign({
-        // --- Identità ---
+        // --- Identity ---
         id: "unknown",
         name: "Untitled Championship",
         family: "Generic",
         season: 2026,
 
-        // --- Grande instradatore del motore ---
+        // --- Engine's main router ---
         raceType: "CircuitRace",
 
-        // --- Fisica generica (moltiplicatori: 1.0 = neutro) ---
+        // --- Generic physics (multipliers: 1.0 = neutral) ---
         physicsModifiers: {
-            slipstreamEffect: 1.0,   // riduzione drag di scia (NASCAR/Indy >> 1)
-            dirtyAirEffect:   1.0,   // degrado prestazionale dietro un'altra auto
-            draftingPower:    1.0,   // efficacia del drafting da contatto
-            drsBoost:         0.0,   // boost percentuale DRS (0 = non previsto)
-            contactTolerance: 0.0,   // 0..1: quanto contatto corpo-a-corpo è tollerato
-            powerToWeight:    1.0,   // modifica il delta di potenza netto tra contendenti
-            suspensionStress: 1.0,   // sollecitazione sospensioni (Baja >> 1)
+            slipstreamEffect: 1.0,   // slipstream drag reduction (NASCAR/Indy >> 1)
+            dirtyAirEffect:   1.0,   // performance degradation behind another car
+            draftingPower:    1.0,   // contact drafting effectiveness
+            drsBoost:         0.0,   // DRS percentage boost (0 = not applicable)
+            contactTolerance: 0.0,   // 0..1: how much body-to-body contact is tolerated
+            powerToWeight:    1.0,   // modifies net power delta between contenders
+            suspensionStress: 1.0,   // suspension stress (Baja >> 1)
         },
 
-        // --- Regole gomme ---
+        // --- Tyre rules ---
         tyreRules: {
-            compounds:        ["medium"],   // messe a disposizione
-            degradationCurve: 1.0,          // moltiplicatore severità degrado (F1 >> 1)
-            blanketAllowed:   true,         // tyre blankets ammessi?
-            blanketEffect:    1.0,          // bonus prestazionale al via con blanket
-            pitLossSeconds:   22,           // tempo perso in un pit stop normale
-            suddenFailureProb:0.0,          // probabilità di cedimento istantaneo (Baja/contatti)
+            compounds:        ["medium"],   // made available
+            degradationCurve: 1.0,          // degradation severity multiplier (F1 >> 1)
+            blanketAllowed:   true,         // tyre blankets allowed?
+            blanketEffect:    1.0,          // performance bonus at start with blanket
+            pitLossSeconds:   22,           // time lost in a normal pit stop
+            suddenFailureProb:0.0,          // probability of instant failure (Baja/contact)
         },
 
-        // --- Regole pilota / stamina ---
+        // --- Driver rules / stamina ---
         driverRules: {
-            stintRequired:    false,        // WEC/IMSA: true (driver stints obbligatori)
-            minStintMinutes:  0,            // durata minima stint per regolamento
-            staminaDrainRate: 1.0,          // velocità calo stamina nei turni di guida
-            riderWeightImpact:1.0,          // Moto: il peso pilota impatta molto
-            crashRiskFactor:  1.0,          // Moto/Baja: rischio caduta legato ad aggressività
-            nightPenalty:     1.0,          // calo prestazioni in notturna (Endurance)
+            stintRequired:    false,        // WEC/IMSA: true (mandatory driver stints)
+            minStintMinutes:  0,            // minimum stint duration by regulation
+            staminaDrainRate: 1.0,          // stamina drop rate during driving turns
+            riderWeightImpact:1.0,          // Moto: rider weight impacts a lot
+            crashRiskFactor:  1.0,          // Moto/Baja: crash risk linked to aggressiveness
+            nightPenalty:     1.0,          // performance drop at night (Endurance)
         },
 
-        // --- Superfici (rally / raid / offroad) ---
+        // --- Surfaces (rally / raid / offroad) ---
         surfaceRules: {
-            available: ["asphalt"],         // superfici previste nel campionato
-            gripTable: {                    // grip relativo per superficie (1.0 = asfalto asciutto)
+            available: ["asphalt"],         // surfaces featured in the championship
+            gripTable: {                    // relative grip per surface (1.0 = dry asphalt)
                 asphalt: 1.0, gravel: 0.78, snow: 0.60, sand: 0.55, ice: 0.45, dirt: 0.72
             },
-            surfaceSwitchTime: 1.0,         // penalità al cambio appoggio (misto rally)
+            surfaceSwitchTime: 1.0,         // penalty when changing surface (mixed rally)
         },
 
-        // --- Meteo & evoluzione tracciato ---
+        // --- Weather & track evolution ---
         weatherRules: {
-            localizedPossible: false,       // WRC/Dakar: può piovere solo su parte del percorso
-            rubberingFactor:   1.0,         // miglioramento tempi per deposito gomma
-            marblesFactor:     1.0,         // gomme morte fuori traiettoria
-            wetGripMultiplier: 0.65,        // grip su bagnato rispetto all'asciutto
+            localizedPossible: false,       // WRC/Dakar: rain may occur only on part of the course
+            rubberingFactor:   1.0,         // lap time improvement from rubber deposit
+            marblesFactor:     1.0,         // dead rubber off the racing line
+            wetGripMultiplier: 0.65,        // grip on wet compared to dry
         },
 
-        // --- Punteggio ---
-        scoringType: "Time",                // "Time" oppure "JudgeStyle" (Drift)
+        // --- Scoring ---
+        scoringType: "Time",                // "Time" or "JudgeStyle" (Drift)
 
-        // --- FLAG ATTIVAZIONE SOTTOSISTEMI (cuore della data-drivenness) ---
-        // Il motore itera questi flag: se true esegue il relativo modulo.
+        // --- SUBSYSTEM ACTIVATION FLAGS (heart of data-drivenness) ---
+        // The engine iterates these flags: if true it runs the related module.
         features: {
-            traffic:          true,   // gestisce il traffico tra contendenti (CircuitRace/Endurance)
-            tyreWear:         true,   // applica degrado gomme
-            fuelOrEnergy:     false,  // gestisce energia/carburante (FE/F1-endurance)
-            driverStints:     false,  // gestisce turni pilota e stamina (Endurance)
-            dayNightCycle:    false,  // ciclo giorno/notte (Endurance)
-            multiClassTraffic:false,  // traffico tra classi diverse con doppia classifica
-            stageSequence:    false,  // prove speciali sequenziali (Rally)
-            cumulativeDamage: false,  // danni che si accumulano tra tappe (Rally/Raid)
-            navigation:       false,  // errori di rotta + waypoint (Raid/Dakar)
-            overnightRepair:  false,  // riparazioni notturne con tempo/pezzi (Raid)
-            judging:          false,  // punteggio a stile giudici (Drift)
-            pointSystem:      "f1",   // chiave del sistema punti (definito in scoringTables)
+            traffic:          true,   // manages traffic between contenders (CircuitRace/Endurance)
+            tyreWear:         true,   // applies tyre degradation
+            fuelOrEnergy:     false,  // manages energy/fuel (FE/F1-endurance)
+            driverStints:     false,  // manages driver turns and stamina (Endurance)
+            dayNightCycle:    false,  // day/night cycle (Endurance)
+            multiClassTraffic:false,  // traffic between different classes with double classification
+            stageSequence:    false,  // sequential special stages (Rally)
+            cumulativeDamage: false,  // damage that accumulates between stages (Rally/Raid)
+            navigation:       false,  // navigation errors + waypoints (Raid/Dakar)
+            overnightRepair:  false,  // overnight repairs with time/parts (Raid)
+            judging:          false,  // judge-style scoring (Drift)
+            pointSystem:      "f1",   // point system key (defined in scoringTables)
         },
 
-        // --- Struttura evento ---
+        // --- Event structure ---
         eventStructure: {
-            sessions: ["practice","qualifying","race"],  // sessioni standard
-            raceDistanceKm: 305,        // o nr. tappe per rally/raid
-            stages: 0,                  // prove speciali (rally/raid)
-            days: 1,                    // giorni di evento (Endurance/Raid)
+            sessions: ["practice","qualifying","race"],  // standard sessions
+            raceDistanceKm: 305,        // or nr. of stages for rally/raid
+            stages: 0,                  // special stages (rally/raid)
+            days: 1,                    // event days (Endurance/Raid)
         },
     }, cfg);
 }
 
 /* -----------------------------------------------------------------------------
- * 2) POOL DEI SISTEMI PUNTI (definitivi una volta, riutilizzabili)
- * Ciascun campionato referenzia il proprio tramite features.pointSystem.
+ * 2) POINT SYSTEM POOL (defined once, reusable)
+ * Each championship references its own via features.pointSystem.
  * ========================================================================== */
 const SCORING_TABLES = {
-    f1:        [25,18,15,12,10,8,6,4,2,1],         // top10 + 1 pt giro veloce (gestito a parte)
+    f1:        [25,18,15,12,10,8,6,4,2,1],         // top10 + 1 pt fastest lap (handled separately)
     moto:      [25,20,16,13,11,10,9,8,7,6,5,4,3,2,1], // top15 MotoGP
-    wec:       [25,18,15,12,10,8,6,4,2,1],         // per classe
-    rally:     [30,24,21,19,17,15,13,11,9,7,5,4,3,2,1], // WRC power-stage esclusa
-    dakar:     [0,0,0,0,0], // Dakar: classifica a tempo, i punti non si usano (placeholder)
+    wec:       [25,18,15,12,10,8,6,4,2,1],         // per class
+    rally:     [30,24,21,19,17,15,13,11,9,7,5,4,3,2,1], // WRC power-stage excluded
+    dakar:     [0,0,0,0,0], // Dakar: time classification, points not used (placeholder)
     touring:   [25,18,15,12,10,8,6,4,2,1],         // WTCR / Stock Car
-    rallycross:[30,24,21,19,17,15,13,11,9,7,5,4,3,2,1], // WRX con semifinali
+    rallycross:[30,24,21,19,17,15,13,11,9,7,5,4,3,2,1], // WRX with semifinals
     speedway:  [20,16,14,12,11,10,9,8,7,6,5,4,3,2,1], // Speedway GP
     truck:     [20,15,12,10,8,6,4,3,2,1],          // ETRC
     karting:   [25,20,16,13,11,10,9,8,7,6,5,4,3,2,1], // Karting
     motocross: [25,22,20,18,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1], // MXGP top20
     superbike: [25,21,18,16,15,13,12,11,10,9,8,7,6,5,4,3,2,1], // WSBK top18
     gt:        [25,18,15,12,10,8,6,4,2,1],         // GT sprint
-    drag:      [0,0,0,0,0],                        // Drag: classifica a tempo puro
-    hillclimb: [0,0,0,0,0],                        // Hill Climb: tempo puro
-    trial:     [0,0,0,0,0],                        // Trial: penalità punti (lower better)
+    drag:      [0,0,0,0,0],                        // Drag: pure time classification
+    hillclimb: [0,0,0,0,0],                        // Hill Climb: pure time
+    trial:     [0,0,0,0,0],                        // Trial: point penalties (lower better)
     junior:    [25,18,15,12,10,8,6,4,2,1],         // Junior series (F4, Regional, Moto Junior)
 };
 
 /* =============================================================================
- * 3) I 5 CAMPIONATI "PROOF OF CONCEPT"
- * Ognuno dimostra un paradigma diverso usando lo STESSO schema generico.
+ * 3) THE 5 "PROOF OF CONCEPT" CHAMPIONSHIPS
+ * Each demonstrates a different paradigm using the SAME generic schema.
  * ========================================================================== */
 
-/* --- F1 — Paradigma "Open Wheel" ----------------------------------------- */
+/* --- F1 — "Open Wheel" Paradigm ----------------------------------------- */
 const F1 = ChampionshipConfig({
     id: "f1",
     name: "Formula 1 World Championship",
@@ -161,14 +161,14 @@ const F1 = ChampionshipConfig({
     raceType: "CircuitRace",
     physicsModifiers: {
         slipstreamEffect: 1.2,
-        dirtyAirEffect:   1.3,    // seguire da vicino distrugge le gomme e l'aero
-        drsBoost:         0.18,   // +18% velocità con DRS aperto in zona
-        contactTolerance: 0.05,   // contatti quasi sempre letali per l'aereo anteriore
+        dirtyAirEffect:   1.3,    // following closely destroys tyres and aero
+        drsBoost:         0.18,   // +18% speed with DRS open in the zone
+        contactTolerance: 0.05,   // contact almost always fatal for the front wing
         powerToWeight:    1.0,
     },
     tyreRules: {
         compounds: ["soft","medium","hard"],
-        degradationCurve: 1.8,    // degrado SEVERO
+        degradationCurve: 1.8,    // SEVERE degradation
         blanketAllowed:   true,
         blanketEffect:    1.05,
         pitLossSeconds:   22,
@@ -185,7 +185,7 @@ const F1 = ChampionshipConfig({
     eventStructure: { sessions:["practice","qualifying","race"], raceDistanceKm:305, stages:0, days:1 },
 });
 
-/* --- F2 — Paradigma "Open Wheel Junior" -------------------------------- */
+/* --- F2 — "Open Wheel Junior" Paradigm -------------------------------- */
 const F2 = ChampionshipConfig({
     id: "f2",
     name: "Formula 2 Championship",
@@ -195,30 +195,30 @@ const F2 = ChampionshipConfig({
     physicsModifiers: {
         slipstreamEffect: 1.1,
         dirtyAirEffect:   1.1,
-        drsBoost:         0.10,   // DRS meno potente rispetto all'F1
+        drsBoost:         0.10,   // DRS less powerful than in F1
         contactTolerance: 0.1,
         powerToWeight:    0.8,
     },
     tyreRules: {
         compounds: ["soft","medium","hard"],
-        degradationCurve: 1.4,    // Le gomme DRS degradano molto in F2
+        degradationCurve: 1.4,    // DRS tyres degrade a lot in F2
         blanketAllowed:   true,
         blanketEffect:    1.0,
         pitLossSeconds:   26,
         suddenFailureProb:0.01,
     },
     driverRules: {
-        stintRequired:false, riderWeightImpact:1.0, crashRiskFactor:0.6, // Più errori dei rookie
+        stintRequired:false, riderWeightImpact:1.0, crashRiskFactor:0.6, // More rookie mistakes
     },
     weatherRules: { rubberingFactor:1.2, marblesFactor:1.0, wetGripMultiplier:0.65 },
     features: {
         traffic:true, tyreWear:true, fuelOrEnergy:false, driverStints:false,
-        pointSystem:"f1", // Stesso sistema punti F1 per semplicità
+        pointSystem:"f1", // Same F1 point system for simplicity
     },
     eventStructure: { sessions:["practice","qualifying","race"], raceDistanceKm:170, stages:0, days:1 },
 });
 
-/* --- F3 — Paradigma "Open Wheel Junior Entry" ------------------------- */
+/* --- F3 — "Open Wheel Junior Entry" Paradigm ------------------------- */
 const F3 = ChampionshipConfig({
     id: "f3",
     name: "FIA Formula 3 Championship",
@@ -233,13 +233,13 @@ const F3 = ChampionshipConfig({
         compounds: ["medium"], degradationCurve: 1.1, blanketAllowed: false, 
         pitLossSeconds: 30, suddenFailureProb: 0.01,
     },
-    driverRules: { stintRequired:false, crashRiskFactor: 0.8 }, // Tanti incidenti tra esordienti
+    driverRules: { stintRequired:false, crashRiskFactor: 0.8 }, // Many incidents among rookies
     weatherRules: { rubberingFactor:1.0, marblesFactor:0.8, wetGripMultiplier: 0.6 },
     features: { traffic:true, tyreWear:true, fuelOrEnergy:false, pointSystem:"f1" },
     eventStructure: { sessions:["practice","qualifying","race"], raceDistanceKm:100, stages:0, days:1 },
 });
 
-/* --- FORMULA E — Paradigma "Electric Energy Mgmt" -------------------- */
+/* --- FORMULA E — "Electric Energy Mgmt" Paradigm -------------------- */
 const FE = ChampionshipConfig({
     id: "fe",
     name: "FIA Formula E World Championship",
@@ -252,15 +252,15 @@ const FE = ChampionshipConfig({
     },
     tyreRules: {
         compounds: ["medium"], degradationCurve: 0.5, blanketAllowed: false, 
-        pitLossSeconds: 0, suddenFailureProb: 0.0, // No pit stop, usano l'Attack Charge
+        pitLossSeconds: 0, suddenFailureProb: 0.0, // No pit stop, they use Attack Charge
     },
     driverRules: { stintRequired:false, crashRiskFactor: 0.5 },
     weatherRules: { rubberingFactor:0.5, marblesFactor:0.0, wetGripMultiplier: 0.5 }, 
-    features: { traffic:true, tyreWear:true, fuelOrEnergy: true, pointSystem:"f1" }, // Gestione Batteria attiva!
+    features: { traffic:true, tyreWear:true, fuelOrEnergy: true, pointSystem:"f1" }, // Battery management active!
     eventStructure: { sessions:["practice","qualifying","race"], raceDistanceKm:100, stages:0, days:1 },
 });
 
-/* --- MOTO 2 — Paradigma "Bike Intermediate" -------------------------- */
+/* --- MOTO 2 — "Bike Intermediate" Paradigm -------------------------- */
 const MOTO2 = ChampionshipConfig({
     id: "moto2",
     name: "Moto2 World Championship",
@@ -281,7 +281,7 @@ const MOTO2 = ChampionshipConfig({
     eventStructure: { sessions:["practice","qualifying","race"], raceDistanceKm:110, stages:0, days:1 },
 });
 
-/* --- MOTO 3 — Paradigma "Bike Entry" ---------------------------------- */
+/* --- MOTO 3 — "Bike Entry" Paradigm ---------------------------------- */
 const MOTO3 = ChampionshipConfig({
     id: "moto3",
     name: "Moto3 World Championship",
@@ -296,13 +296,13 @@ const MOTO3 = ChampionshipConfig({
         compounds: ["soft","medium"], degradationCurve: 0.8, blanketAllowed: false, 
         pitLossSeconds: 30, suddenFailureProb: 0.02,
     },
-    driverRules: { stintRequired:false, riderWeightImpact:1.5, crashRiskFactor: 1.8 }, // Tante cadute
+    driverRules: { stintRequired:false, riderWeightImpact:1.5, crashRiskFactor: 1.8 }, // Many crashes
     weatherRules: { rubberingFactor:0.8, marblesFactor:0.2, wetGripMultiplier: 0.6 },
     features: { traffic:true, tyreWear:true, pointSystem:"moto" },
     eventStructure: { sessions:["practice","qualifying","race"], raceDistanceKm:95, stages:0, days:1 },
 });
 
-/* --- MOTOGP — Paradigma "Bike" ------------------------------------------- */
+/* --- MOTOGP — "Bike" Paradigm ------------------------------------------- */
 const MOTOGP = ChampionshipConfig({
     id: "motogp",
     name: "MotoGP World Championship",
@@ -310,24 +310,24 @@ const MOTOGP = ChampionshipConfig({
     season: 2026,
     raceType: "CircuitRace",
     physicsModifiers: {
-        slipstreamEffect: 1.4,    // lo scia in moto è enorme
-        dirtyAirEffect:   0.8,    // meno sensibilità aero di una F1
+        slipstreamEffect: 1.4,    // slipstream in moto is huge
+        dirtyAirEffect:   0.8,    // less aero sensitivity than F1
         drsBoost:         0.0,
-        contactTolerance: 0.2,    // tocchi frequenti, raramente letali
-        powerToWeight:    1.15,   // delta netto di potenza tra moto
+        contactTolerance: 0.2,    // frequent touches, rarely fatal
+        powerToWeight:    1.15,   // net power delta between bikes
     },
     tyreRules: {
         compounds: ["soft","medium","hard"],
         degradationCurve: 1.2,
-        blanketAllowed:   false,  // MotoGP: niente blanket
+        blanketAllowed:   false,  // MotoGP: no blankets
         blanketEffect:    1.0,
         pitLossSeconds:   30,
         suddenFailureProb:0.01,
     },
     driverRules: {
         stintRequired:false,
-        riderWeightImpact:1.4,    // il peso pilota è critico
-        crashRiskFactor:  1.6,    // cadute rischiose legate ad aggressività
+        riderWeightImpact:1.4,    // rider weight is critical
+        crashRiskFactor:  1.6,    // risky crashes linked to aggressiveness
     },
     weatherRules: { rubberingFactor:1.1, marblesFactor:0.6, wetGripMultiplier:0.7 },
     features: {
@@ -336,7 +336,7 @@ const MOTOGP = ChampionshipConfig({
     eventStructure: { sessions:["practice","qualifying","race"], raceDistanceKm:120, stages:0, days:1 },
 });
 
-/* --- WEC HYPERCAR — Paradigma "Endurance" ------------------------------- */
+/* --- WEC HYPERCAR — "Endurance" Paradigm ------------------------------- */
 const WEC = ChampionshipConfig({
     id: "wec",
     name: "FIA WEC — Hypercar",
@@ -347,34 +347,34 @@ const WEC = ChampionshipConfig({
         slipstreamEffect: 1.1,
         dirtyAirEffect:   1.1,
         contactTolerance: 0.15,
-        powerToWeight:    0.9,    // le Hypercar sono "libere" ma bilanciate da BoP
+        powerToWeight:    0.9,    // Hypercars are "free" but balanced by BoP
     },
     tyreRules: {
         compounds: ["soft","medium","hard"],
-        degradationCurve: 0.9,    // gomme studiate per durare
+        degradationCurve: 0.9,    // tyres designed to last
         blanketAllowed:   true,
         blanketEffect:    1.03,
-        pitLossSeconds:   45,     // pit più lunghi (rifornimento + 3 piloti)
+        pitLossSeconds:   45,     // longer pit stops (refueling + 3 drivers)
         suddenFailureProb:0.008,
     },
     driverRules: {
-        stintRequired:    true,   // TURNO DI GUIDA OBBLIGATORIO
+        stintRequired:    true,   // MANDATORY DRIVING TURN
         minStintMinutes:  60,
         staminaDrainRate: 1.0,
         riderWeightImpact:1.0,
         crashRiskFactor:  0.4,
-        nightPenalty:     1.15,   // in notturna il rendimento cala
+        nightPenalty:     1.15,   // performance drops at night
     },
     weatherRules: { localizedPossible:false, rubberingFactor:1.0, marblesFactor:0.9, wetGripMultiplier:0.68 },
     features: {
         traffic:true, tyreWear:true, driverStints:true, dayNightCycle:true,
-        multiClassTraffic:true,     // LMP2/GT tra le Hypercar
+        multiClassTraffic:true,     // LMP2/GT among the Hypercars
         pointSystem:"wec",
     },
     eventStructure: { sessions:["practice","qualifying","race"], raceDistanceKm:5100, stages:0, days:1 },
 });
 
-/* --- WRC — Paradigma "Stage Rally" -------------------------------------- */
+/* --- WRC — "Stage Rally" Paradigm -------------------------------------- */
 const WRC = ChampionshipConfig({
     id: "wrc",
     name: "FIA World Rally Championship",
@@ -382,18 +382,18 @@ const WRC = ChampionshipConfig({
     season: 2026,
     raceType: "StageRally",
     physicsModifiers: {
-        slipstreamEffect: 0.0,    // si corre DA SOLI contro il cronometro
+        slipstreamEffect: 0.0,    // raced ALONE against the clock
         dirtyAirEffect:   0.0,
         contactTolerance: 0.0,
         powerToWeight:    1.0,
-        suspensionStress: 1.5,     // salti e dossi su terra
+        suspensionStress: 1.5,     // jumps and bumps on dirt
     },
     tyreRules: {
         compounds: ["soft","medium","hard","wet","snow"],
         degradationCurve: 1.0,
         blanketAllowed:   false,
         blanketEffect:    1.0,
-        pitLossSeconds:   0,       // si cambia gomma nel parc fermé / tra le SS
+        pitLossSeconds:   0,       // tyres changed in parc fermé / between SS
         suddenFailureProb:0.01,
     },
     driverRules: {
@@ -402,11 +402,11 @@ const WRC = ChampionshipConfig({
     surfaceRules: {
         available: ["asphalt","gravel","snow"],
         gripTable: { asphalt:1.0, gravel:0.78, snow:0.60, dirt:0.72 },
-        surfaceSwitchTime: 1.1,    // rallentamento sul misto
+        surfaceSwitchTime: 1.1,    // slowdown on mixed surfaces
     },
     weatherRules: {
-        localizedPossible: true,  // può piovere solo su METÀ della prova speciale
-        rubberingFactor:   0.2,   // niente rubbering in rally
+        localizedPossible: true,  // rain may occur only on HALF of the special stage
+        rubberingFactor:   0.2,   // no rubbering in rally
         marblesFactor:     0.0,
         wetGripMultiplier: 0.6,
     },
@@ -419,7 +419,7 @@ const WRC = ChampionshipConfig({
     },
 });
 
-/* --- DAKAR — Paradigma "Marathon Raid" ---------------------------------- */
+/* --- DAKAR — "Marathon Raid" Paradigm ---------------------------------- */
 const DAKAR = ChampionshipConfig({
     id: "dakar",
     name: "Dakar Rally",
@@ -427,11 +427,11 @@ const DAKAR = ChampionshipConfig({
     season: 2026,
     raceType: "MarathonRaid",
     physicsModifiers: {
-        slipstreamEffect: 0.3,    // poco scia su dune/sterrato
+        slipstreamEffect: 0.3,    // little slipstream on dunes/offroad
         dirtyAirEffect:   0.0,
         contactTolerance: 0.0,
         powerToWeight:    1.0,
-        suspensionStress: 2.2,    // whoops, dossi, salti continui
+        suspensionStress: 2.2,    // whoops, bumps, continuous jumps
     },
     tyreRules: {
         compounds: ["allterrain"],
@@ -439,11 +439,11 @@ const DAKAR = ChampionshipConfig({
         blanketAllowed:   false,
         blanketEffect:    1.0,
         pitLossSeconds:   0,
-        suddenFailureProb:0.03,   // rottura meccanica ISTANTANEA frequente
+        suddenFailureProb:0.03,   // frequent INSTANT mechanical failure
     },
     driverRules: {
         stintRequired:false, riderWeightImpact:1.0, crashRiskFactor:1.0,
-        staminaDrainRate:1.4,     // tappe di centinaia di km, estenuanti
+        staminaDrainRate:1.4,     // stages of hundreds of km, grueling
     },
     surfaceRules: {
         available: ["sand","gravel","dirt"],
@@ -451,16 +451,16 @@ const DAKAR = ChampionshipConfig({
         surfaceSwitchTime: 1.0,
     },
     weatherRules: {
-        localizedPossible: true,  // tempeste di sabbia localizzate
+        localizedPossible: true,  // localized sandstorms
         rubberingFactor:   0.0,
         marblesFactor:     0.0,
         wetGripMultiplier: 0.5,
     },
     features: {
         traffic:false, tyreWear:true, stageSequence:true, cumulativeDamage:true,
-        navigation:true,           // waypoint nascosti: errore di rotta = penalità enormi
-        overnightRepair:true,      // riparazione notturna con tempo/pezzi limitati
-        pointSystem:"dakar",       // classifica a tempo puro
+        navigation:true,           // hidden waypoints: navigation error = huge penalty
+        overnightRepair:true,      // overnight repair with limited time/parts
+        pointSystem:"dakar",       // pure time classification
     },
     eventStructure: {
         sessions:["stages"], raceDistanceKm:8000, stages:12, days:14,
@@ -468,7 +468,7 @@ const DAKAR = ChampionshipConfig({
 });
 
 /* =============================================================================
- * 5) CAMPIONATI AGGIUNTIVI — Tutte le discipline del motorsport globale
+ * 5) ADDITIONAL CHAMPIONSHIPS — All global motorsport disciplines
  * ========================================================================== */
 
 /* --- FORMULA 4 — Open Wheel Entry-Level --------------------------------- */
@@ -476,7 +476,7 @@ const F4 = ChampionshipConfig({
     id: "f4", name: "FIA Formula 4 Championship", family: "OpenWheel", season: 2026, raceType: "CircuitRace",
     physicsModifiers: { slipstreamEffect:0.9, dirtyAirEffect:0.8, drsBoost:0.0, contactTolerance:0.2, powerToWeight:0.5 },
     tyreRules: { compounds:["medium"], degradationCurve:0.8, blanketAllowed:false, pitLossSeconds:30, suddenFailureProb:0.015 },
-    driverRules: { stintRequired:false, crashRiskFactor:1.0 }, // Tanti rookie, tanti errori
+    driverRules: { stintRequired:false, crashRiskFactor:1.0 }, // Many rookies, many mistakes
     weatherRules: { rubberingFactor:0.8, marblesFactor:0.5, wetGripMultiplier:0.6 },
     features: { traffic:true, tyreWear:true, pointSystem:"junior" },
     eventStructure: { sessions:["practice","qualifying","race"], raceDistanceKm:80, stages:0, days:1 },
@@ -504,7 +504,7 @@ const ELMS = ChampionshipConfig({
     eventStructure: { sessions:["practice","qualifying","race"], raceDistanceKm:1600, stages:0, days:1 }, // ~4h races
 });
 
-/* --- IMSA — Endurance Americana ---------------------------------------- */
+/* --- IMSA — American Endurance ---------------------------------------- */
 const IMSA = ChampionshipConfig({
     id: "imsa", name: "IMSA WeatherTech Sportscar Championship", family: "Endurance", season: 2026, raceType: "EnduranceRace",
     physicsModifiers: { slipstreamEffect:1.15, dirtyAirEffect:1.0, contactTolerance:0.2, powerToWeight:0.88 },
@@ -548,7 +548,7 @@ const GT2 = ChampionshipConfig({
     eventStructure: { sessions:["practice","qualifying","race"], raceDistanceKm:250, stages:0, days:1 },
 });
 
-/* --- FERRARI CHALLENGE — Monomarca GT ---------------------------------- */
+/* --- FERRARI CHALLENGE — One-Make GT ---------------------------------- */
 const FERRARI_CHALLENGE = ChampionshipConfig({
     id: "ferrari_challenge", name: "Ferrari Challenge", family: "GT", season: 2026, raceType: "CircuitRace",
     physicsModifiers: { slipstreamEffect:1.0, dirtyAirEffect:1.0, contactTolerance:0.3, powerToWeight:0.8 },
@@ -559,7 +559,7 @@ const FERRARI_CHALLENGE = ChampionshipConfig({
     eventStructure: { sessions:["practice","qualifying","race"], raceDistanceKm:200, stages:0, days:1 },
 });
 
-/* --- PORSCHE CARRERA CUP — Monomarca GT -------------------------------- */
+/* --- PORSCHE CARRERA CUP — One-Make GT -------------------------------- */
 const PORSCHE_CUP = ChampionshipConfig({
     id: "porsche_cup", name: "Porsche Carrera Cup", family: "GT", season: 2026, raceType: "CircuitRace",
     physicsModifiers: { slipstreamEffect:1.0, dirtyAirEffect:1.0, contactTolerance:0.25, powerToWeight:0.82 },
@@ -570,7 +570,7 @@ const PORSCHE_CUP = ChampionshipConfig({
     eventStructure: { sessions:["practice","qualifying","race"], raceDistanceKm:180, stages:0, days:1 },
 });
 
-/* --- LAMBORGHINI SUPER TROFEO — Monomarca GT ---------------------------- */
+/* --- LAMBORGHINI SUPER TROFEO — One-Make GT ---------------------------- */
 const LAMBORGHINI_TROFEO = ChampionshipConfig({
     id: "lamborghini_trofeo", name: "Lamborghini Super Trofeo", family: "GT", season: 2026, raceType: "CircuitRace",
     physicsModifiers: { slipstreamEffect:1.0, dirtyAirEffect:1.0, contactTolerance:0.28, powerToWeight:0.82 },
@@ -585,7 +585,7 @@ const LAMBORGHINI_TROFEO = ChampionshipConfig({
 const WTCR = ChampionshipConfig({
     id: "wtcr", name: "World Touring Car Cup (WTCR)", family: "TouringCar", season: 2026, raceType: "CircuitRace",
     physicsModifiers: { slipstreamEffect:1.3, dirtyAirEffect:1.0, drsBoost:0.0, contactTolerance:0.6, powerToWeight:0.7 },
-    // Touring cars: contatti frequenti e tollerati, molto scia
+    // Touring cars: frequent and tolerated contact, lots of slipstream
     tyreRules: { compounds:["soft","medium","hard"], degradationCurve:1.0, blanketAllowed:true, blanketEffect:1.02, pitLossSeconds:25, suddenFailureProb:0.01 },
     driverRules: { stintRequired:false, crashRiskFactor:1.2 }, // Bump-and-run
     weatherRules: { rubberingFactor:1.0, marblesFactor:0.7, wetGripMultiplier:0.68 },
@@ -593,12 +593,12 @@ const WTCR = ChampionshipConfig({
     eventStructure: { sessions:["practice","qualifying","race"], raceDistanceKm:150, stages:0, days:1 },
 });
 
-/* --- STOCK CAR CHAMPIONSHIPS — Touring Car Brasiliana ------------------ */
+/* --- STOCK CAR CHAMPIONSHIPS — Brazilian Touring Car ------------------ */
 const STOCK_CAR = ChampionshipConfig({
     id: "stock_car", name: "Stock Car Pro Series", family: "TouringCar", season: 2026, raceType: "CircuitRace",
     physicsModifiers: { slipstreamEffect:1.5, dirtyAirEffect:0.8, drsBoost:0.0, contactTolerance:0.7, powerToWeight:0.75 },
     tyreRules: { compounds:["soft","medium"], degradationCurve:1.1, blanketAllowed:true, blanketEffect:1.02, pitLossSeconds:28, suddenFailureProb:0.01 },
-    driverRules: { stintRequired:false, crashRiskFactor:1.5 }, // Gare molto fisiche, contatti pesanti
+    driverRules: { stintRequired:false, crashRiskFactor:1.5 }, // Very physical races, heavy contact
     weatherRules: { rubberingFactor:1.1, marblesFactor:0.5, wetGripMultiplier:0.65 },
     features: { traffic:true, tyreWear:true, pointSystem:"touring" },
     eventStructure: { sessions:["practice","qualifying","race"], raceDistanceKm:200, stages:0, days:1 },
@@ -640,7 +640,7 @@ const APRC = ChampionshipConfig({
     eventStructure: { sessions:["shakedown","stages"], raceDistanceKm:230, stages:14, days:3 },
 });
 
-/* --- CODASUR — Rally Sudamericano -------------------------------------- */
+/* --- CODASUR — South American Rally -------------------------------------- */
 const CODASUR = ChampionshipConfig({
     id: "codasur", name: "CODASUR Rally Championship", family: "Rally", season: 2026, raceType: "StageRally",
     physicsModifiers: { slipstreamEffect:0.0, dirtyAirEffect:0.0, contactTolerance:0.0, powerToWeight:0.88, suspensionStress:1.5 },
@@ -664,7 +664,7 @@ const MERC = ChampionshipConfig({
     eventStructure: { sessions:["shakedown","stages"], raceDistanceKm:200, stages:12, days:3 },
 });
 
-/* --- NACAM RALLY CHAMPIONSHIP — Rally Centro/Nord America -------------- */
+/* --- NACAM RALLY CHAMPIONSHIP — Central/North American Rally -------------- */
 const NACAM = ChampionshipConfig({
     id: "nacam", name: "NACAM Rally Championship", family: "Rally", season: 2026, raceType: "StageRally",
     physicsModifiers: { slipstreamEffect:0.0, dirtyAirEffect:0.0, contactTolerance:0.0, powerToWeight:0.88, suspensionStress:1.4 },
@@ -676,9 +676,9 @@ const NACAM = ChampionshipConfig({
     eventStructure: { sessions:["shakedown","stages"], raceDistanceKm:200, stages:12, days:3 },
 });
 
-/* --- RALLY CUP REGIONALI — Rally Amatoriale ----------------------------- */
+/* --- RALLY CUP REGIONAL — Amateur Rally ----------------------------- */
 const RALLY_CUP = ChampionshipConfig({
-    id: "rally_cup", name: "Rally Cup Regionali", family: "Rally", season: 2026, raceType: "StageRally",
+    id: "rally_cup", name: "Rally Cup Regional", family: "Rally", season: 2026, raceType: "StageRally",
     physicsModifiers: { slipstreamEffect:0.0, dirtyAirEffect:0.0, contactTolerance:0.0, powerToWeight:0.8, suspensionStress:1.3 },
     tyreRules: { compounds:["medium","gravel"], degradationCurve:0.9, blanketAllowed:false, pitLossSeconds:0, suddenFailureProb:0.01 },
     driverRules: { stintRequired:false, crashRiskFactor:0.9 },
@@ -692,13 +692,13 @@ const RALLY_CUP = ChampionshipConfig({
 const WRX = ChampionshipConfig({
     id: "wrx", name: "FIA World Rallycross Championship", family: "Rallycross", season: 2026, raceType: "CircuitRace",
     physicsModifiers: { slipstreamEffect:0.8, dirtyAirEffect:0.5, drsBoost:0.0, contactTolerance:0.8, powerToWeight:1.2, suspensionStress:1.8 },
-    // Rallycross: circuiti corti misti asfalto+terra, partenza lanciata, contatti pesanti, joker lap
+    // Rallycross: short mixed asphalt+dirt circuits, rolling start, heavy contact, joker lap
     tyreRules: { compounds:["medium","gravel"], degradationCurve:0.7, blanketAllowed:false, pitLossSeconds:0, suddenFailureProb:0.015 },
-    driverRules: { stintRequired:false, crashRiskFactor:2.0 }, // Contatti estremi, partenze caotiche
+    driverRules: { stintRequired:false, crashRiskFactor:2.0 }, // Extreme contact, chaotic starts
     surfaceRules: { available:["asphalt","gravel","dirt"], gripTable:{asphalt:1.0,gravel:0.78,dirt:0.72}, surfaceSwitchTime:0.95 },
     weatherRules: { rubberingFactor:0.5, marblesFactor:0.0, wetGripMultiplier:0.65 },
     features: { traffic:true, tyreWear:true, pointSystem:"rallycross" },
-    eventStructure: { sessions:["practice","qualifying","race"], raceDistanceKm:8, stages:0, days:1 }, // Gare brevissime ~5 giri
+    eventStructure: { sessions:["practice","qualifying","race"], raceDistanceKm:8, stages:0, days:1 }, // Very short races ~5 laps
 });
 
 /* --- AUTOCROSS CHAMPIONSHIPS — Offroad Sprint -------------------------- */
@@ -775,7 +775,7 @@ const MOTO_JUNIOR = ChampionshipConfig({
     id: "moto_junior", name: "Moto Junior Series", family: "Bike", season: 2026, raceType: "CircuitRace",
     physicsModifiers: { slipstreamEffect:1.8, dirtyAirEffect:0.3, drsBoost:0.0, contactTolerance:0.3, powerToWeight:0.6 },
     tyreRules: { compounds:["soft","medium"], degradationCurve:0.7, blanketAllowed:false, pitLossSeconds:30, suddenFailureProb:0.02 },
-    driverRules: { stintRequired:false, riderWeightImpact:1.6, crashRiskFactor:2.0 }, // Giovanissimi, tante cadute
+    driverRules: { stintRequired:false, riderWeightImpact:1.6, crashRiskFactor:2.0 }, // Very young, many crashes
     weatherRules: { rubberingFactor:0.7, marblesFactor:0.1, wetGripMultiplier:0.58 },
     features: { traffic:true, tyreWear:true, pointSystem:"junior" },
     eventStructure: { sessions:["practice","qualifying","race"], raceDistanceKm:70, stages:0, days:1 },
@@ -785,13 +785,13 @@ const MOTO_JUNIOR = ChampionshipConfig({
 const MXGP = ChampionshipConfig({
     id: "mxgp", name: "MXGP Motocross World Championship", family: "Motocross", season: 2026, raceType: "CircuitRace",
     physicsModifiers: { slipstreamEffect:0.2, dirtyAirEffect:0.1, drsBoost:0.0, contactTolerance:0.5, powerToWeight:1.1, suspensionStress:2.5 },
-    // Motocross: salti continui, terra, nessuna scia, atterraggi brutali
+    // Motocross: continuous jumps, dirt, no slipstream, brutal landings
     tyreRules: { compounds:["allterrain"], degradationCurve:0.5, blanketAllowed:false, pitLossSeconds:0, suddenFailureProb:0.0 },
-    driverRules: { stintRequired:false, riderWeightImpact:1.5, crashRiskFactor:2.5, staminaDrainRate:2.0 }, // Fisicamente estremo
+    driverRules: { stintRequired:false, riderWeightImpact:1.5, crashRiskFactor:2.5, staminaDrainRate:2.0 }, // Physically extreme
     surfaceRules: { available:["dirt"], gripTable:{dirt:0.72}, surfaceSwitchTime:1.0 },
-    weatherRules: { rubberingFactor:0.0, marblesFactor:0.0, wetGripMultiplier:0.5 }, // Fango = caos
+    weatherRules: { rubberingFactor:0.0, marblesFactor:0.0, wetGripMultiplier:0.5 }, // Mud = chaos
     features: { traffic:true, tyreWear:true, pointSystem:"motocross" },
-    eventStructure: { sessions:["practice","qualifying","race"], raceDistanceKm:10, stages:0, days:1 }, // 2 manche da 30min
+    eventStructure: { sessions:["practice","qualifying","race"], raceDistanceKm:10, stages:0, days:1 }, // 2 races of 30min
 });
 
 /* --- SUPERENDURO WORLD CHAMPIONSHIP — Indoor Enduro -------------------- */
@@ -799,54 +799,54 @@ const SUPERENDURO = ChampionshipConfig({
     id: "superenduro", name: "FIM SuperEnduro World Championship", family: "Motocross", season: 2026, raceType: "StageRally",
     physicsModifiers: { slipstreamEffect:0.1, dirtyAirEffect:0.0, contactTolerance:0.3, powerToWeight:1.0, suspensionStress:2.0 },
     tyreRules: { compounds:["allterrain"], degradationCurve:0.4, blanketAllowed:false, pitLossSeconds:0, suddenFailureProb:0.0 },
-    driverRules: { stintRequired:false, riderWeightImpact:1.4, crashRiskFactor:3.0, staminaDrainRate:2.5 }, // Ostacoli estremi
+    driverRules: { stintRequired:false, riderWeightImpact:1.4, crashRiskFactor:3.0, staminaDrainRate:2.5 }, // Extreme obstacles
     surfaceRules: { available:["dirt","asphalt"], gripTable:{dirt:0.72,asphalt:1.0}, surfaceSwitchTime:0.9 },
     weatherRules: { rubberingFactor:0.0, marblesFactor:0.0, wetGripMultiplier:0.5 },
     features: { traffic:false, tyreWear:true, stageSequence:true, cumulativeDamage:true, pointSystem:"motocross" },
-    eventStructure: { sessions:["practice","qualifying","race"], raceDistanceKm:5, stages:3, days:1 }, // 3 manche indoor
+    eventStructure: { sessions:["practice","qualifying","race"], raceDistanceKm:5, stages:3, days:1 }, // 3 indoor races
 });
 
-/* --- TRIAL WORLD CHAMPIONSHIP — Osservato (no tempo) ------------------- */
+/* --- TRIAL WORLD CHAMPIONSHIP — Observed (no time) ------------------- */
 const TRIAL = ChampionshipConfig({
     id: "trial", name: "FIM Trial World Championship", family: "Trial", season: 2026, raceType: "CircuitRace",
     scoringType: "JudgeStyle",
     physicsModifiers: { slipstreamEffect:0.0, dirtyAirEffect:0.0, contactTolerance:0.0, powerToWeight:0.3, suspensionStress:1.5 },
     tyreRules: { compounds:["allterrain"], degradationCurve:0.1, blanketAllowed:false, pitLossSeconds:0, suddenFailureProb:0.0 },
-    driverRules: { stintRequired:false, riderWeightImpact:1.0, crashRiskFactor:5.0, staminaDrainRate:2.0 }, // Ogni tocco terra = penalità
+    driverRules: { stintRequired:false, riderWeightImpact:1.0, crashRiskFactor:5.0, staminaDrainRate:2.0 }, // Every ground touch = penalty
     surfaceRules: { available:["asphalt","dirt","gravel","rock"], gripTable:{asphalt:1.0,dirt:0.72,gravel:0.78,rock:0.6}, surfaceSwitchTime:1.0 },
     weatherRules: { rubberingFactor:0.0, marblesFactor:0.0, wetGripMultiplier:0.5 },
     features: { traffic:false, tyreWear:false, judging:true, pointSystem:"trial" },
-    eventStructure: { sessions:["practice","sections"], raceDistanceKm:0, stages:15, days:1 }, // 15 sezioni osservate
+    eventStructure: { sessions:["practice","sections"], raceDistanceKm:0, stages:15, days:1 }, // 15 observed sections
 });
 
-/* --- SPEEDWAY GRAND PRIX — Oval Terra ---------------------------------- */
+/* --- SPEEDWAY GRAND PRIX — Dirt Oval ---------------------------------- */
 const SPEEDWAY = ChampionshipConfig({
     id: "speedway", name: "FIM Speedway Grand Prix", family: "Speedway", season: 2026, raceType: "CircuitRace",
     physicsModifiers: { slipstreamEffect:2.0, dirtyAirEffect:0.0, drsBoost:0.0, contactTolerance:0.9, powerToWeight:1.3, suspensionStress:1.8 },
-    // Speedway: ovale terra, 4 giri, scia enorme, derapata controllata, niente freni
+    // Speedway: dirt oval, 4 laps, huge slipstream, controlled drift, no brakes
     tyreRules: { compounds:["allterrain"], degradationCurve:0.3, blanketAllowed:false, pitLossSeconds:0, suddenFailureProb:0.0 },
     driverRules: { stintRequired:false, riderWeightImpact:1.5, crashRiskFactor:2.5, staminaDrainRate:1.8 },
     surfaceRules: { available:["dirt"], gripTable:{dirt:0.72}, surfaceSwitchTime:1.0 },
     weatherRules: { rubberingFactor:0.0, marblesFactor:0.0, wetGripMultiplier:0.5 },
     features: { traffic:true, tyreWear:true, pointSystem:"speedway" },
-    eventStructure: { sessions:["practice","qualifying","race"], raceDistanceKm:3, stages:0, days:1 }, // 4 giri x ~80s
+    eventStructure: { sessions:["practice","qualifying","race"], raceDistanceKm:3, stages:0, days:1 }, // 4 laps x ~80s
 });
 
 /* --- KARTING WORLD CHAMPIONSHIP — Karting ------------------------------ */
 const KARTING_WORLD = ChampionshipConfig({
     id: "karting_world", name: "FIA Karting World Championship", family: "Karting", season: 2026, raceType: "CircuitRace",
     physicsModifiers: { slipstreamEffect:1.8, dirtyAirEffect:0.3, drsBoost:0.0, contactTolerance:0.4, powerToWeight:0.4, suspensionStress:0.5 },
-    // Kart: fisica pura, nessuna sospensione, scia enorme, gommaggio basso ma sensibilità al bagnato alta
+    // Kart: pure physics, no suspension, huge slipstream, low rubbering but high wet sensitivity
     tyreRules: { compounds:["soft","medium","hard"], degradationCurve:0.6, blanketAllowed:false, pitLossSeconds:0, suddenFailureProb:0.005 },
-    driverRules: { stintRequired:false, riderWeightImpact:2.0, crashRiskFactor:1.2 }, // Peso pilota pesa tantissimo
-    weatherRules: { rubberingFactor:1.5, marblesFactor:0.3, wetGripMultiplier:0.5 }, // Kart in bagnato lentissimi
+    driverRules: { stintRequired:false, riderWeightImpact:2.0, crashRiskFactor:1.2 }, // Rider weight matters a lot
+    weatherRules: { rubberingFactor:1.5, marblesFactor:0.3, wetGripMultiplier:0.5 }, // Karts very slow in the wet
     features: { traffic:true, tyreWear:true, pointSystem:"karting" },
     eventStructure: { sessions:["practice","qualifying","race"], raceDistanceKm:20, stages:0, days:1 },
 });
 
-/* --- KARTING REGIONALI — Karting Amatoriale ---------------------------- */
+/* --- KARTING REGIONAL — Amateur Karting ---------------------------- */
 const KARTING_REGIONAL = ChampionshipConfig({
-    id: "karting_regional", name: "Karting Cup Regionali", family: "Karting", season: 2026, raceType: "CircuitRace",
+    id: "karting_regional", name: "Karting Cup Regional", family: "Karting", season: 2026, raceType: "CircuitRace",
     physicsModifiers: { slipstreamEffect:1.8, dirtyAirEffect:0.3, drsBoost:0.0, contactTolerance:0.4, powerToWeight:0.35, suspensionStress:0.5 },
     tyreRules: { compounds:["medium"], degradationCurve:0.5, blanketAllowed:false, pitLossSeconds:0, suddenFailureProb:0.005 },
     driverRules: { stintRequired:false, riderWeightImpact:2.0, crashRiskFactor:1.3 },
@@ -859,11 +859,11 @@ const KARTING_REGIONAL = ChampionshipConfig({
 const TRUCK = ChampionshipConfig({
     id: "truck", name: "FIA European Truck Racing Championship", family: "Truck", season: 2026, raceType: "CircuitRace",
     physicsModifiers: { slipstreamEffect:0.3, dirtyAirEffect:1.5, drsBoost:0.0, contactTolerance:0.9, powerToWeight:0.3, suspensionStress:1.0 },
-    // Truck: enormi, pesantissimi, inerzia enorme, frenano per ultimi, scia poca, contatti pesanti
+    // Truck: huge, very heavy, massive inertia, brake latest, little slipstream, heavy contact
     tyreRules: { compounds:["hard"], degradationCurve:0.8, blanketAllowed:true, blanketEffect:1.01, pitLossSeconds:40, suddenFailureProb:0.005 },
-    driverRules: { stintRequired:false, crashRiskFactor:0.8 }, // Campioni esperti, controllati
+    driverRules: { stintRequired:false, crashRiskFactor:0.8 }, // Expert champions, controlled
     weatherRules: { rubberingFactor:0.8, marblesFactor:0.8, wetGripMultiplier:0.7 },
-    features: { traffic:true, tyreWear:true, fuelOrEnergy:true, pointSystem:"truck" }, // Consumo carburante limitato per regolamento
+    features: { traffic:true, tyreWear:true, fuelOrEnergy:true, pointSystem:"truck" }, // Limited fuel consumption by regulation
     eventStructure: { sessions:["practice","qualifying","race"], raceDistanceKm:80, stages:0, days:1 },
 });
 
@@ -872,30 +872,30 @@ const DRAG = ChampionshipConfig({
     id: "drag", name: "FIA European Drag Racing Championship", family: "Drag", season: 2026, raceType: "CircuitRace",
     scoringType: "Time",
     physicsModifiers: { slipstreamEffect:0.0, dirtyAirEffect:0.0, drsBoost:0.0, contactTolerance:0.0, powerToWeight:3.0, suspensionStress:0.5 },
-    // Drag: 402m, accelerazione pura, nessun sorpasso, reazione alla partenza critica
+    // Drag: 402m, pure acceleration, no overtaking, start reaction critical
     tyreRules: { compounds:["slick"], degradationCurve:0.2, blanketAllowed:true, blanketEffect:1.1, pitLossSeconds:0, suddenFailureProb:0.02 },
-    driverRules: { stintRequired:false, crashRiskFactor:1.5, staminaDrainRate:0.5 }, // Reazione + coraggio
-    weatherRules: { rubberingFactor:2.0, marblesFactor:0.0, wetGripMultiplier:0.3 }, // Bagnato = pericoloso
+    driverRules: { stintRequired:false, crashRiskFactor:1.5, staminaDrainRate:0.5 }, // Reaction + courage
+    weatherRules: { rubberingFactor:2.0, marblesFactor:0.0, wetGripMultiplier:0.3 }, // Wet = dangerous
     features: { traffic:false, tyreWear:false, pointSystem:"drag" },
-    eventStructure: { sessions:["qualifying","race"], raceDistanceKm:0.4, stages:0, days:1 }, // 1/4 miglio
+    eventStructure: { sessions:["qualifying","race"], raceDistanceKm:0.4, stages:0, days:1 }, // 1/4 mile
 });
 
-/* --- HILL CLIMB CHAMPIONSHIPS — Salita Cronometrata -------------------- */
+/* --- HILL CLIMB CHAMPIONSHIPS — Timed Hill Climb -------------------- */
 const HILLCLIMB = ChampionshipConfig({
     id: "hillclimb", name: "FIA Hill Climb Championships", family: "HillClimb", season: 2026, raceType: "StageRally",
     physicsModifiers: { slipstreamEffect:0.0, dirtyAirEffect:0.0, contactTolerance:0.0, powerToWeight:1.2, suspensionStress:1.0 },
-    // Hill Climb: salita A->B in salita, asfalto, tempo puro, 1 auto alla volta
+    // Hill Climb: A->B uphill, asphalt, pure time, 1 car at a time
     tyreRules: { compounds:["soft","medium"], degradationCurve:0.4, blanketAllowed:true, blanketEffect:1.05, pitLossSeconds:0, suddenFailureProb:0.005 },
     driverRules: { stintRequired:false, crashRiskFactor:1.0 },
     surfaceRules: { available:["asphalt"], gripTable:{asphalt:1.0}, surfaceSwitchTime:1.0 },
     weatherRules: { localizedPossible:true, rubberingFactor:0.3, marblesFactor:0.0, wetGripMultiplier:0.55 },
     features: { traffic:false, tyreWear:true, stageSequence:true, pointSystem:"hillclimb" },
-    eventStructure: { sessions:["practice","qualifying","race"], raceDistanceKm:8, stages:2, days:1 }, // 2 salite cronometrate
+    eventStructure: { sessions:["practice","qualifying","race"], raceDistanceKm:8, stages:2, days:1 }, // 2 timed runs
 });
 
-/* --- MONOMARCA AUTOMOBILISTICI — One-Make Car -------------------------- */
+/* --- ONE-MAKE CAR CHAMPIONSHIPS — One-Make Car -------------------------- */
 const MONOMARCA_AUTO = ChampionshipConfig({
-    id: "monomarca_auto", name: "Monomarca Automobilistici", family: "GT", season: 2026, raceType: "CircuitRace",
+    id: "monomarca_auto", name: "One-Make Car Championship", family: "GT", season: 2026, raceType: "CircuitRace",
     physicsModifiers: { slipstreamEffect:1.2, dirtyAirEffect:0.8, drsBoost:0.0, contactTolerance:0.4, powerToWeight:0.7 },
     tyreRules: { compounds:["medium"], degradationCurve:0.7, blanketAllowed:true, blanketEffect:1.01, pitLossSeconds:28, suddenFailureProb:0.005 },
     driverRules: { stintRequired:false, crashRiskFactor:1.0 },
@@ -904,9 +904,9 @@ const MONOMARCA_AUTO = ChampionshipConfig({
     eventStructure: { sessions:["practice","qualifying","race"], raceDistanceKm:150, stages:0, days:1 },
 });
 
-/* --- MONOMARCA MOTOCICLISTICI — One-Make Bike -------------------------- */
+/* --- ONE-MAKE BIKE CHAMPIONSHIPS — One-Make Bike -------------------------- */
 const MONOMARCA_MOTO = ChampionshipConfig({
-    id: "monomarca_moto", name: "Monomarca Motociclistici", family: "Bike", season: 2026, raceType: "CircuitRace",
+    id: "monomarca_moto", name: "One-Make Bike Championship", family: "Bike", season: 2026, raceType: "CircuitRace",
     physicsModifiers: { slipstreamEffect:1.5, dirtyAirEffect:0.5, drsBoost:0.0, contactTolerance:0.3, powerToWeight:0.8 },
     tyreRules: { compounds:["medium"], degradationCurve:0.8, blanketAllowed:false, pitLossSeconds:30, suddenFailureProb:0.01 },
     driverRules: { stintRequired:false, riderWeightImpact:1.3, crashRiskFactor:1.5 },
@@ -916,11 +916,11 @@ const MONOMARCA_MOTO = ChampionshipConfig({
 });
 
 /* -----------------------------------------------------------------------------
- * 4) REGISTRO CENTRALE — accesso unificato per id (motore + UI)
- * Aggiungere una nuova disciplina = pushare un nuovo config in questo oggetto.
+ * 4) CENTRAL REGISTRY — unified access by id (engine + UI)
+ * Adding a new discipline = push a new config into this object.
  * ========================================================================== */
 const CHAMPIONSHIPS = {
-    // --- Originali (10) ---
+    // --- Originals (10) ---
     [F1.id]:    F1, [F2.id]:F2, [F3.id]:F3, [FE.id]:FE,
     [MOTOGP.id]:MOTOGP, [MOTO2.id]:MOTO2, [MOTO3.id]:MOTO3,
     [WEC.id]:WEC, [WRC.id]:WRC, [DAKAR.id]:DAKAR,
@@ -931,7 +931,7 @@ const CHAMPIONSHIPS = {
     [FERRARI_CHALLENGE.id]:FERRARI_CHALLENGE, [PORSCHE_CUP.id]:PORSCHE_CUP, [LAMBORGHINI_TROFEO.id]:LAMBORGHINI_TROFEO,
     // --- Touring Car (2) ---
     [WTCR.id]:WTCR, [STOCK_CAR.id]:STOCK_CAR,
-    // --- Rally Regionali (7) ---
+    // --- Regional Rally (7) ---
     [ERC.id]:ERC, [ARC.id]:ARC, [APRC.id]:APRC, [CODASUR.id]:CODASUR, [MERC.id]:MERC, [NACAM.id]:NACAM, [RALLY_CUP.id]:RALLY_CUP,
     // --- Rallycross & Offroad (2) ---
     [WRX.id]:WRX, [AUTOCROSS.id]:AUTOCROSS,
@@ -948,7 +948,7 @@ const CHAMPIONSHIPS = {
     [MONOMARCA_AUTO.id]:MONOMARCA_AUTO, [MONOMARCA_MOTO.id]:MONOMARCA_MOTO,
 };
 
-/* Esposizione per il browser (oggetto globale) e per moduli Common/ES se servisse. */
+/* Exposure for the browser (global object) and for Common/ES modules if needed. */
 if (typeof window !== "undefined") {
     window.ChampionshipConfig = ChampionshipConfig;
     window.SCORING_TABLES = SCORING_TABLES;

@@ -1,7 +1,7 @@
 /* =============================================================================
  * ULTIMATE MOTORSPORT MANAGER
  * File: data/teams/gt_endurance.js
- * Squadre per GT & Endurance (ELMS, IMSA, GTWC, GT Open, GT2, Ferrari, Porsche, Lambo)
+ * Teams for GT & Endurance (ELMS, IMSA, GTWC, GT Open, GT2, Ferrari, Porsche, Lambo)
  * ========================================================================== */
 
 /* --- ELMS (European Le Mans Series) — LMP2/LMP3 + LMGTE --- */
@@ -126,7 +126,7 @@ const GT2_TEAMS = [
     ]},
 ];
 
-/* --- FERRARI CHALLENGE (Monomarca GT) --- */
+/* --- FERRARI CHALLENGE (One-Make GT) --- */
 const FERRARI_CHALLENGE_TEAMS = [
     { id:"fc_rossocorsa", name:"Rosso Corsa", color:"#DC2626", carModel:"Ferrari 296 Challenge", power:0.82, reliability:0.80, drivers:[
         { id:"fc_d1", name:"G. Bruni", pace:0.83, racecraft:0.79, consistency:0.77, fitness:0.79, age:42, nationality:"ITA" },
@@ -146,7 +146,7 @@ const FERRARI_CHALLENGE_TEAMS = [
     ]},
 ];
 
-/* --- PORSCHE CARRERA CUP (Monomarca GT) --- */
+/* --- PORSCHE CARRERA CUP (One-Make GT) --- */
 const PORSCHE_CUP_TEAMS = [
     { id:"pc_bachata", name:"Bachata Racing", color:"#DC2626", carModel:"Porsche 911 GT3 Cup", power:0.82, reliability:0.80, drivers:[
         { id:"pc_d1", name:"L. Inthrapuvas", pace:0.83, racecraft:0.79, consistency:0.77, fitness:0.79, age:31, nationality:"THA" },
@@ -166,7 +166,7 @@ const PORSCHE_CUP_TEAMS = [
     ]},
 ];
 
-/* --- LAMBORGHINI SUPER TROFEO (Monomarca GT) --- */
+/* --- LAMBORGHINI SUPER TROFEO (One-Make GT) --- */
 const LAMBORGHINI_TROFEO_TEAMS = [
     { id:"lt_target", name:"Target Racing", color:"#1E40AF", carModel:"Lamborghini Huracán ST", power:0.83, reliability:0.80, drivers:[
         { id:"lt_d1", name:"A. Imperatori", pace:0.83, racecraft:0.79, consistency:0.77, fitness:0.79, age:35, nationality:"ITA" },

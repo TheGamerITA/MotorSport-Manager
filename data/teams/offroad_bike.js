@@ -1,7 +1,7 @@
 /* =============================================================================
  * ULTIMATE MOTORSPORT MANAGER
  * File: data/teams/offroad_bike.js
- * Squadre per Moto Offroad (MXGP, SuperEnduro, Trial, Speedway)
+ * Teams for Offroad Bikes (MXGP, SuperEnduro, Trial, Speedway)
  * ========================================================================== */
 
 /* --- MXGP (FIM Motocross World Championship) --- */

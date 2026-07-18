@@ -1,7 +1,7 @@
 /* =============================================================================
  * ULTIMATE MOTORSPORT MANAGER
  * File: data/teams/f4_fregional.js
- * Squadre per Formula 4 e Formula Regional (Open Wheel Junior)
+ * Teams for Formula 4 and Formula Regional (Open Wheel Junior)
  * ========================================================================== */
 
 const F4_TEAMS = [

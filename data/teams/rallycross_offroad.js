@@ -1,7 +1,7 @@
 /* =============================================================================
  * ULTIMATE MOTORSPORT MANAGER
  * File: data/teams/rallycross_offroad.js
- * Squadre per Rallycross & Offroad (WRX, Autocross)
+ * Teams for Rallycross & Offroad (WRX, Autocross)
  * ========================================================================== */
 
 /* --- WORLD RALLYCROSS CHAMPIONSHIP (WRX) --- */

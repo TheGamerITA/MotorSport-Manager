@@ -2,12 +2,12 @@
  * ULTIMATE MOTORSPORT MANAGER
  * File: data/teams/dakarTeams.js
  * -----------------------------------------------------------------------------
- * DATABASE DAKAR RALLY — CATEGORIA AUTO/ULTIMATE (Stagione 2026)
- * Raid marathon: il motore (_runMarathonRaid) legge le stat speciali:
- *   navigationSkill (evita errori di rotta, il fattore #1 del Dakar),
- *   desertExperience (riduce le penalità di navigazione) e
- *   carControl (guida su dune/sabbia/pietraie).
- * Passate via specialStats e fuse nel driver dal factory.
+ * DATABASE DAKAR RALLY — CAR/ULTIMATE CATEGORY (Season 2026)
+ * Marathon raid: the engine (_runMarathonRaid) reads special stats:
+ *   navigationSkill (avoids route errors, the #1 factor in Dakar),
+ *   desertExperience (reduces navigation penalties) and
+ *   carControl (driving on dunes/sand/stone fields).
+ * Passed via specialStats and merged into the driver by the factory.
  * ========================================================================== */
 
 const DAKAR_TEAMS = [

@@ -1,7 +1,7 @@
 /* =============================================================================
  * ULTIMATE MOTORSPORT MANAGER
  * File: data/teams/special.js
- * Squadre per Categorie Speciali (Truck, Drag, Hill Climb, Monomarca Auto, Monomarca Moto)
+ * Teams for Special Categories (Truck, Drag, Hill Climb, One-Make Car, One-Make Bike)
  * ========================================================================== */
 
 /* --- TRUCK (FIA European Truck Racing Championship) --- */
@@ -64,7 +64,7 @@ const HILLCLIMB_TEAMS = [
     ]},
 ];
 
-/* --- MONOMARCA AUTO (Campionati Monomarca — Fiat 500, Abarth, Clio Cup) --- */
+/* --- ONE-MAKE CAR (One-Make Championships — Fiat 500, Abarth, Clio Cup) --- */
 const MONOMARCA_AUTO_TEAMS = [
     { id:"ma_abarth", name:"Abarth Racing Italia", color:"#DC2626", carModel:"Abarth 695 Assetto", power:0.82, reliability:0.79, drivers:[
         { id:"ma_d1", name:"A. Giovanardi", pace:0.84, racecraft:0.81, consistency:0.79, fitness:0.82, age:46, nationality:"ITA" },
@@ -84,7 +84,7 @@ const MONOMARCA_AUTO_TEAMS = [
     ]},
 ];
 
-/* --- MONOMARCA MOTO (Campionati Monomarca Moto — Yamaha R3, R1, KTM RC390) --- */
+/* --- ONE-MAKE BIKE (One-Make Bike Championships — Yamaha R3, R1, KTM RC390) --- */
 const MONOMARCA_MOTO_TEAMS = [
     { id:"mm_r3", name:"Yamaha R3 Cup", color:"#1E40AF", carModel:"Yamaha YZF-R3", power:0.78, reliability:0.75, drivers:[
         { id:"mm_d1", name:"L. Torzi", pace:0.78, racecraft:0.75, consistency:0.73, fitness:0.76, age:16, nationality:"ITA" },

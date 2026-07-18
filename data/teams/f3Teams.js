@@ -2,9 +2,9 @@
  * ULTIMATE MOTORSPORT MANAGER
  * File: data/teams/f3Teams.js
  * -----------------------------------------------------------------------------
- * DATABASE FIA FORMULA 3 (Stagione 2026)
- * Categoria entry-level: piloti giovani, stat più basse, tanti rookie ad alto
- * potenziale nascosto.
+ * DATABASE FIA FORMULA 3 (Season 2026)
+ * Entry-level category: young drivers, lower stats, many high-potential rookies
+ * with hidden potential.
  * ========================================================================== */
 
 const F3_TEAMS = [

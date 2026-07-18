@@ -1,12 +1,12 @@
 const CreateTeamScreen = (() => {
-    // Avevo dimenticato di definire queste due funzioni utility qui!
+    // Utility functions defined here for local DOM access
     const $ = (sel, root = document) => root.querySelector(sel);
     const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 
     const PRESETS = {
-        underdog: { name: "Underdog", desc: "Budget magro, personale scarso. La sfida estrema.", budget: 45000, staff: { aero:55, engine:55, mechanics:60 }, prestige:35, starterPace: 0.45 },
-        ribelle: { name: "Ribelle indipendente", desc: "Budget medio, personale modesto. Più giocabile.", budget: 80000, staff: { aero:65, engine:62, mechanics:68 }, prestige:50, starterPace: 0.55 },
-        equilibrato: { name: "Operazione salvataggio", desc: "Budget buono, personale discreto. Per competere subito.", budget: 120000, staff: { aero:72, engine:70, mechanics:75 }, prestige:62, starterPace: 0.62 }
+        underdog: { name: "Underdog", desc: "Lean budget, weak staff. The extreme challenge.", budget: 45000, staff: { aero:55, engine:55, mechanics:60 }, prestige:35, starterPace: 0.45 },
+        ribelle: { name: "Independent Rebel", desc: "Medium budget, modest staff. More playable.", budget: 80000, staff: { aero:65, engine:62, mechanics:68 }, prestige:50, starterPace: 0.55 },
+        equilibrato: { name: "Rescue Operation", desc: "Good budget, decent staff. To compete right away.", budget: 120000, staff: { aero:72, engine:70, mechanics:75 }, prestige:62, starterPace: 0.62 }
     };
 
     const LOGO_PRESETS = ["◆","★","▲","●","✦","⬢","♛","⚔","♦","⚡"];
@@ -26,20 +26,20 @@ const CreateTeamScreen = (() => {
             <div class="create-team-form">
                 <div class="ctf-left">
                     <div class="ctf-field">
-                        <label>Nome scuderia</label>
-                        <input type="text" id="ctName" maxlength="30" placeholder="es. Scuderia Alpha" />
+                        <label>Team name</label>
+                        <input type="text" id="ctName" maxlength="30" placeholder="e.g. Alpha Racing" />
                     </div>
                     <div class="ctf-field">
-                        <label>Nazione</label>
+                        <label>Nation</label>
                         <select id="ctNation">${NATIONS.map(n=>`<option value="${n}">${n}</option>`).join("")}</select>
                     </div>
                     <div class="ctf-colors">
                         <div class="ctf-field" style="flex-grow: 1;">
-                            <label>Colore principale</label>
+                            <label>Primary color</label>
                             <input type="color" id="ctColor1" value="${form.color1}" />
                         </div>
                         <div class="ctf-field" style="flex-grow: 1;">
-                            <label>Colore secondario</label>
+                            <label>Secondary color</label>
                             <input type="color" id="ctColor2" value="${form.color2}" />
                         </div>
                     </div>
@@ -54,7 +54,7 @@ const CreateTeamScreen = (() => {
 
                 <div class="ctf-right">
                     <div class="ctf-field">
-                        <label>Pacchetto di partenza</label>
+                        <label>Starting package</label>
                         <div class="preset-list">
                             ${Object.entries(PRESETS).map(([k,p])=>`
                                 <button type="button" class="preset-card ${k==="underdog"?"sel":""}" data-preset="${k}">
@@ -71,7 +71,7 @@ const CreateTeamScreen = (() => {
                 </div>
             </div>
             <div class="ctf-actions" style="margin-top: 20px; text-align: right;">
-                <button class="btn-primary" id="ctConfirm" style="width: auto; padding: 12px 30px;">Crea e Procedi</button>
+                <button class="btn-primary" id="ctConfirm" style="width: auto; padding: 12px 30px;">Create & Proceed</button>
             </div>
         `;
     }
@@ -109,7 +109,7 @@ const CreateTeamScreen = (() => {
 
         $("#ctConfirm", container).addEventListener("click", () => {
             if (!form.name.trim()) {
-                alert("Inserisci un nome per la scuderia.");
+                alert("Please enter a team name.");
                 return;
             }
             const team = _buildTeam(champId);
@@ -121,14 +121,14 @@ const CreateTeamScreen = (() => {
         const preview = $("#teamPreviewContainer", container);
         if (!preview) return;
 
-        const name = form.name.trim() || "NOME SQUADRA";
+        const name = form.name.trim() || "TEAM NAME";
         const c1 = form.color1;
         const c2 = form.color2;
         const glyph = LOGO_PRESETS[form.logoIdx];
 
         preview.innerHTML = `
             <div class="ctf-field" style="margin-top: 20px;">
-                <label>Anteprima Identità</label>
+                <label>Identity Preview</label>
                 <div class="team-preview-card" style="
                     background: ${c1};
                     border: 3px solid ${c2};
