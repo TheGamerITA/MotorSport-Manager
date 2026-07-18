@@ -53,12 +53,141 @@ class RaceCalculator {
     _clamp01(v) { return Math.max(0, Math.min(1, v)); }
 
     /* =============================================================================
+     * QUALIFICA — simula la sessione di qualifica e restituisce la griglia.
+     * A differenza della gara, qui conta soprattutto la stat `qualifying` e si
+     * gira con carburante scarico e gomme fresche. Ritorna un array ordinato
+     * di {driverId, driver, teamId, team, position, lapTimeMs, lapTimeStr}.
+     * options.grid vettore di driverId per forzare l'ordine (debug/replay).
+     * ========================================================================== */
+    simulateQualifying(championshipId, options = {}) {
+        const cfg = (typeof CHAMPIONSHIPS !== "undefined")
+            ? CHAMPIONSHIPS[championshipId] : null;
+        if (!cfg) throw new Error(`RaceCalculator: championship '${championshipId}' non trovato`);
+
+        const teams = (typeof ALL_TEAMS !== "undefined") ? (ALL_TEAMS[championshipId] || []) : [];
+        if (teams.length === 0) throw new Error(`Nessun team per '${championshipId}'`);
+
+        const track = (typeof getTrack === "function" && options.trackId)
+            ? getTrack(options.trackId) : null;
+        const baseLapMs = this._baseLapTimeMs(cfg, track);
+
+        // Costruisci partecipanti e ritmo base
+        const entrants = [];
+        for (const team of teams) {
+            for (const driver of team.drivers) {
+                const e = { driver, team, rawPace: 0 };
+                this.buildBasePace(cfg, e, options);
+                entrants.push(e);
+            }
+        }
+
+        // Simula 3 tentativi (Q1/Q2/Q3-style semplificato): prendi il miglior giro
+        const results = entrants.map(e => {
+            let bestLap = Infinity;
+            const d = e.driver;
+            // La qualifica pesa molto di più la stat qualifying + pace puro
+            let qualPace = e.rawPace * 0.55 + this._stat(d, "qualifying") * 0.35 + this._stat(d, "consistency") * 0.10;
+            // Meteo bagnato in qualifica: pesa wetPerformance
+            if (options.weather === "wet") qualPace *= (0.75 + 0.25 * this._stat(d, "wetPerformance"));
+            if (options.weather === "mixed") qualPace *= (0.90 + 0.10 * this._stat(d, "wetPerformance"));
+            // Morale
+            qualPace *= (0.92 + 0.08 * ((d.morale || 75) / 100));
+
+            // 3 tentativi con varianza: il migliore conta
+            for (let attempt = 1; attempt <= 3; attempt++) {
+                // ogni tentativo ha un piccolo miglioramento (riscaldamento gomme) ma anche rischio errore
+                const heat = 1 - 0.004 * attempt; // si va leggermente più veloci
+                const errorRisk = (1 - this._stat(d, "consistency")) * 0.015 * attempt;
+                let lapTime = baseLapMs / Math.max(0.3, qualPace) * heat;
+                if (this._rand() < errorRisk) lapTime *= 1.05; // errore nel giro
+                // micro-varianza
+                lapTime *= (1 + this._randRange(-0.008, 0.008));
+                if (lapTime < bestLap) bestLap = lapTime;
+            }
+            return {
+                driverId: d.id, driver: d.name, nationality: d.nationality,
+                teamId: e.team.id, team: e.team.name,
+                bestLapMs: bestLap,
+            };
+        });
+
+        results.sort((a, b) => a.bestLapMs - b.bestLapMs);
+        return results.map((r, i) => ({
+            ...r,
+            position: i + 1,
+            gridPosition: i + 1,
+            lapTimeStr: this._formatTime(r.bestLapMs),
+        }));
+    }
+
+    /* =============================================================================
+     * PROVE LIBERE — simula la sessione di practice. Ritorna feedback sul setup
+     * e un "setupConfidence" 0..1 che può influenzare il morale / la qualifica.
+     * Inoltre svela una stima del potenziale reale (per scouting integrato).
+     * ========================================================================== */
+    simulatePractice(championshipId, options = {}) {
+        const cfg = (typeof CHAMPIONSHIPS !== "undefined")
+            ? CHAMPIONSHIPS[championshipId] : null;
+        if (!cfg) throw new Error(`RaceCalculator: championship '${championshipId}' non trovato`);
+
+        const teams = (typeof ALL_TEAMS !== "undefined") ? (ALL_TEAMS[championshipId] || []) : [];
+        const track = (typeof getTrack === "function" && options.trackId)
+            ? getTrack(options.trackId) : null;
+        const baseLapMs = this._baseLapTimeMs(cfg, track);
+
+        const entrants = [];
+        for (const team of teams) {
+            for (const driver of team.drivers) {
+                const e = { driver, team, rawPace: 0 };
+                this.buildBasePace(cfg, e, options);
+                entrants.push(e);
+            }
+        }
+
+        // Simula 10-15 giri di practice: rileva il ritmo e la consistenza
+        return entrants.map(e => {
+            const d = e.driver;
+            const laps = 10 + Math.floor(this._rand() * 6);
+            let bestLap = Infinity, totalConsistency = 0;
+            for (let l = 0; l < laps; l++) {
+                let lt = baseLapMs / Math.max(0.3, e.rawPace);
+                lt *= (1 + this._randRange(-0.03, 0.03));
+                // miglioramento col setup (fuelTyreMgmt = feedback del pilota)
+                lt *= (1 - 0.002 * this._stat(d, "fuelTyreMgmt") * (l / laps));
+                if (lt < bestLap) bestLap = lt;
+                totalConsistency += lt;
+            }
+            const avgLap = totalConsistency / laps;
+            // setupConfidence: quanto il team ha trovato un buon setup
+            const staff = e.team.staff || {};
+            const setupConfidence = this._clamp01(
+                0.4 + 0.3 * ((staff.mechanics || 50) / 100) + 0.2 * this._stat(d, "fuelTyreMgmt") + this._randRange(-0.1, 0.1)
+            );
+            // stima potenziale visibile (per scouting: più alto se hiddenPotential alto)
+            const potentialHint = d.hiddenPotential
+                ? this._clamp01(d.hiddenPotential * (0.85 + 0.3 * this._rand()))
+                : null;
+            return {
+                driverId: d.id, driver: d.name, teamId: e.team.id, team: e.team.name,
+                bestLapMs: bestLap, bestLapStr: this._formatTime(bestLap),
+                avgLapMs: avgLap, avgLapStr: this._formatTime(avgLap),
+                consistency: this._clamp01(1 - (Math.abs(bestLap - avgLap) / avgLap)),
+                setupConfidence,
+                potentialHint,
+                pace: +e.rawPace.toFixed(3),
+            };
+        }).sort((a, b) => a.bestLapMs - b.bestLapMs);
+    }
+
+    /* =============================================================================
      * ENTRY POINT PUBBLICO
      * Restituisce un oggetto risultato completo per l'evento.
      *   options:
      *     weather     -> "dry" | "wet" | "mixed"
      *     surface     -> (rally/raid) "asphalt"|"gravel"|"snow"|"sand"|"dirt"
      *     nightStage  -> bool (endurance notturna)
+     *     grid        -> array di driverId ordinati (dalla qualifica) per forzare
+     *                    l'ordine di partenza invece di calcolarlo internamente
      * ========================================================================== */
     simulateEvent(championshipId, options = {}) {
         const cfg = (typeof CHAMPIONSHIPS !== "undefined")
@@ -152,6 +281,9 @@ class RaceCalculator {
 
         // presto: il pilota è il 65%, la macchina il 35% (regolabile)
         let pace = driverPace * 0.65 + teamPace * 0.35;
+        // powerToWeight: discipline ad alta potenza (Drag, NASCAR) enfatizzano
+        // il divario prestazionale netto tra contendenti (1.0 = neutro).
+        pace *= (0.97 + 0.03 * (cfg.physicsModifiers.powerToWeight || 1.0));
 
         // penalità per meteo bagnato: pesa la wetPerformance del pilota
         if (options.weather === "wet") {
@@ -175,11 +307,20 @@ class RaceCalculator {
     _runCircuitRace(cfg, participants, options, track) {
         const laps = this._estimateLaps(cfg, track);  // nr. giri dal tracciato/distanza
 
-        // qualifica: ordina per pace+qualifying -> griglia
+        // qualifica: ordina per pace+qualifying -> griglia. Se options.grid
+        // è stato fornito (dalla sessione di qualifica separata), ordina i
+        // partecipanti secondo quell'ordine invece di ricalcolarlo.
         participants.forEach(p => this.buildBasePace(cfg, p, options));
-        let grid = [...participants].sort((a, b) =>
-            (b.rawPace + this._stat(b.driver, "qualifying") * 0.1)
-          - (a.rawPace + this._stat(a.driver, "qualifying") * 0.1));
+        let grid;
+        if (Array.isArray(options.grid) && options.grid.length > 0) {
+            const order = new Map(options.grid.map((id, i) => [id, i]));
+            grid = [...participants].sort((a, b) =>
+                (order.get(a.driver.id) ?? 999) - (order.get(b.driver.id) ?? 999));
+        } else {
+            grid = [...participants].sort((a, b) =>
+                (b.rawPace + this._stat(b.driver, "qualifying") * 0.1)
+              - (a.rawPace + this._stat(a.driver, "qualifying") * 0.1));
+        }
 
         // tempo base per giro di riferimento (ms) — track-aware
         const baseLapMs = this._baseLapTimeMs(cfg, track);
@@ -219,6 +360,27 @@ class RaceCalculator {
                     lapTime *= (1 + 0.06 * tyreWear * cfg.tyreRules.degradationCurve);
                     // bonus gestione conservativa del pilota
                     lapTime *= (1 - 0.02 * this._stat(entrant.driver, "fuelTyreMgmt"));
+
+                    // --- CEDIMENTO GOMMA ISTANTANEO (suddenFailureProb) ---
+                    // La probabilità scala col degrado accumulato: gomma fresca non cede.
+                    if (tyreWear > 0.5 &&
+                        this._rand() < (cfg.tyreRules.suddenFailureProb || 0) * 0.1 * tyreWear) {
+                        if (this._rand() < 0.4) {
+                            entrant.timeMs = Infinity;
+                            entrant.notes.push({lap, type:"TYRE_FAIL", msg:"Cedimento gomma: ritiro"});
+                            break;
+                        } else {
+                            lapTime *= 1.20;
+                            entrant.notes.push({lap, type:"TYRE_BLIST", msg:"Gonfiatura gomma: giro lento"});
+                        }
+                    }
+
+                    // --- PIT STOP: se il degrado supera la soglia e il pit è previsto ---
+                    if (tyreWear > 0.75 && (cfg.tyreRules.pitLossSeconds || 0) > 0) {
+                        lapTime += cfg.tyreRules.pitLossSeconds * 1000;
+                        tyreWear = 0.15; // gomme nuove ma non perfette
+                        entrant.notes.push({lap, type:"PIT", msg:"Pit stop: cambio gomme"});
+                    }
                 }
 
                 // --- DISELIVELLO: tracciati collinosi (Spa) premiano carControl/stamina ---
@@ -526,9 +688,7 @@ class RaceCalculator {
             const points = (position <= scoring.length && cfg.scoringType === "Time")
                 ? scoring[idx]
                 : 0;
-            const finished = p.timeMs !== Infinity && p.styleScore !== undefined
-                ? true
-                : p.timeMs !== Infinity;
+            const finished = p.timeMs !== Infinity;
             return {
                 position: finished ? position : "DNF",
                 driver: p.driver.name,
@@ -563,8 +723,9 @@ class RaceCalculator {
             const trafficPenalty = 0.01 * dirtyAir * (0.5 + 1.5 * tOver);
             const overtakeChance = 0.1 * (1 - tOver); // facile sorpasso -> più tentativi
             if (this._rand() < overtakeChance) {
-                // sorpasso riuscito: piccolo bonus, niente penalità
-                lapTime *= (1 - 0.005 * dirtyAir);
+                // sorpasso riuscito: bonus proporzionale a slipstreamEffect (NASCAR >> F1)
+                const slip = cfg.physicsModifiers.slipstreamEffect || 1.0;
+                lapTime *= (1 - 0.005 * slip);
             } else {
                 lapTime *= (1 + trafficPenalty);
             }

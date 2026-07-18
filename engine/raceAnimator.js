@@ -23,6 +23,19 @@ class RaceAnimator {
     loadEventData(eventData) {
         this.timelines = eventData.timelines || [];
         this.raceType = eventData.raceType;
+
+        // Costruisce l'insieme dei piloti ritirati (DNF) dalla classifica
+        // finale: è l'unico modo affidabile per distinguere un DNF (timeline
+        // troncata a metà gara) da un pilota semplicemente veloce (finisce
+        // prima degli altri ma ha completato tutti i giri).
+        this.dnfDriverIds = new Set();
+        if (Array.isArray(eventData.results)) {
+            for (const r of eventData.results) {
+                if (r.position === "DNF" || r.timeStr === "DNF") {
+                    this.dnfDriverIds.add(r.driverId);
+                }
+            }
+        }
         
         // Calcola la durata trovando il tempo massimo di chi ha finito
         this.durationMs = 0;
@@ -138,13 +151,32 @@ class RaceAnimator {
                 if (trackProgress < 0) trackProgress += 1; // Corregge partenza
             }
 
+            // Determina se il pilota è ritirato (DNF) consultando l'insieme
+            // costruito in loadEventData dalla classifica finale.
+            const isDNF = this.dnfDriverIds && this.dnfDriverIds.has(driverData.driverId);
+
+            // Per i DNF: congela il pilota nell'ultima posizione nota della
+            // sua timeline (dove si è ritirato), così il renderer può mostrarlo
+            // come un punto grigio fermo sul tracciato invece di farlo sparire.
+            let finalProgress = trackProgress;
+            if (isDNF) {
+                const last = tl[tl.length - 1];
+                if (this.raceType === "CircuitRace" || this.raceType === "EnduranceRace") {
+                    finalProgress = (last.progress % 1 + 1) % 1;
+                } else {
+                    finalProgress = last.progress;
+                }
+            }
+
             state.drivers.push({
                 id: driverData.driverId,
                 name: driverData.driver,
                 teamId: driverData.teamId,
                 color: driverData.color,
-                trackProgress: trackProgress, // 0..1 usato dal canvas
-                lap: lap
+                trackProgress: finalProgress,
+                lap: lap,
+                finished: !isDNF,
+                dnf: isDNF
             });
         }
 

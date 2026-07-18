@@ -59,6 +59,31 @@ const RenderView = (() => {
         animator.play();
     }
 
+    /* Mostra un'anteprima statica del tracciato (senza animazione piloti)
+       usata per le sessioni di prove libere e qualifiche, dove non ci sono
+       timeline da animare. Evita il "canvas verde" durante queste sessioni. */
+    function showTrackPreview(trackId, label) {
+        if (!ctx) return;
+        if (typeof getTrack !== "function") return;
+        const track = getTrack(trackId);
+        if (!track) { clearCanvas(); return; }
+
+        currentRaceData = { track, results: [], timelines: [] };
+        trackPath = track.waypoints ? buildPath(track) : [];
+        animator.pause();
+        draw({ currentTimeMs: 0, durationMs: 0, drivers: [], _previewLabel: label || "" });
+    }
+
+    /* Pulisce il canvas mostrando solo il prato (sfondo vuoto). */
+    function clearCanvas() {
+        if (!ctx) return;
+        currentRaceData = null;
+        trackPath = [];
+        const w = canvas.width, h = canvas.height;
+        ctx.fillStyle = COLORS.grass;
+        ctx.fillRect(0, 0, w, h);
+    }
+
     let speedLevels = [1, 2, 5, 15];
     let currentSpeedIdx = 0;
     function toggleSpeed() {
@@ -128,11 +153,27 @@ const RenderView = (() => {
 
         // Disegna piloti
         for (const d of state.drivers) {
+            if (d.trackProgress === null || d.trackProgress === undefined) continue;
+
             let pos;
             if (isCircuit) {
                 pos = getPositionOnPath(d.trackProgress);
             } else {
                 pos = getLinearCoords(d.trackProgress, w, h);
+            }
+
+            // I piloti ritirati (DNF) sono mostrati come punti grigi fermi
+            if (d.dnf) {
+                ctx.fillStyle = 'rgba(0,0,0,0.3)';
+                ctx.beginPath(); ctx.arc(pos.x+2, pos.y+2, 6, 0, Math.PI*2); ctx.fill();
+                ctx.fillStyle = '#555';
+                ctx.beginPath(); ctx.arc(pos.x, pos.y, 6, 0, Math.PI*2); ctx.fill();
+                ctx.strokeStyle = '#888'; ctx.lineWidth = 1; ctx.stroke();
+                ctx.fillStyle = '#aaa';
+                ctx.font = '9px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('✕ ' + d.name, pos.x, pos.y - 10);
+                continue;
             }
 
             ctx.fillStyle = 'rgba(0,0,0,0.4)';
@@ -154,7 +195,11 @@ const RenderView = (() => {
         ctx.fillStyle = '#00d4ff';
         ctx.font = '14px monospace';
         ctx.textAlign = 'left';
-        ctx.fillText(`Tempo: ${formatTime(state.currentTimeMs)} / ${formatTime(state.durationMs)}`, 20, h - 20);
+        if (state._previewLabel) {
+            ctx.fillText(state._previewLabel, 20, h - 20);
+        } else {
+            ctx.fillText(`Tempo: ${formatTime(state.currentTimeMs)} / ${formatTime(state.durationMs)}`, 20, h - 20);
+        }
     }
 
     function drawTrackFromWaypoints() {
@@ -225,6 +270,47 @@ const RenderView = (() => {
         }
         ctx.restore();
 
+        // Per tracciati aperti (rally/raid/hillclimb): frecce direzionali e
+        // bandiera a scacchi all'arrivo, per chiarire che è point-to-point.
+        if (track.type === "open") {
+            const end = trackPath[trackPath.length - 1];
+            // Bandiera a scacchi all'arrivo
+            ctx.save();
+            ctx.translate(end.x, end.y);
+            const endAngle = Math.atan2(
+                end.y - (trackPath[trackPath.length - 2] || end).y,
+                end.x - (trackPath[trackPath.length - 2] || end).x
+            );
+            ctx.rotate(endAngle);
+            const flagW = halfW + 4;
+            for (let r = 0; r < 4; r++) {
+                for (let c = 0; c < 2; c++) {
+                    ctx.fillStyle = ((r + c) % 2 === 0) ? '#000' : '#FFF';
+                    ctx.fillRect(-3 + c * 3, -flagW + (r * flagW * 2) / 4, 3, (flagW * 2) / 4);
+                }
+            }
+            ctx.restore();
+
+            // Frecce direzionali lungo il percorso ogni N segmenti
+            const arrowInterval = Math.max(3, Math.floor(trackPath.length / 6));
+            for (let i = arrowInterval; i < trackPath.length - 1; i += arrowInterval) {
+                const p = trackPath[i];
+                const pNext = trackPath[i + 1];
+                const a = Math.atan2(pNext.y - p.y, pNext.x - p.x);
+                ctx.save();
+                ctx.translate(p.x, p.y);
+                ctx.rotate(a);
+                ctx.fillStyle = 'rgba(255,255,255,0.45)';
+                ctx.beginPath();
+                ctx.moveTo(8, 0);
+                ctx.lineTo(-4, -5);
+                ctx.lineTo(-4, 5);
+                ctx.closePath();
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
         // overlay info tracciato (nome, paese, caratteristiche)
         if (track.name) {
             ctx.fillStyle = 'rgba(0,0,0,0.75)';
@@ -266,7 +352,7 @@ const RenderView = (() => {
         return `${m}:${s.toString().padStart(2,'0')}.${milli.toString().padStart(3,'0')}`;
     }
 
-    return { init, loadAndPlay };
+    return { init, loadAndPlay, showTrackPreview, clearCanvas };
 })();
 
 if (typeof window !== "undefined") window.RenderView = RenderView;

@@ -716,9 +716,681 @@ const DAKAR_MONTAGNA = T({
 });
 
 /* =============================================================================
+ * CIRCUITI GT (riutilizzano tracciati esistenti + nuovi dedicati)
+ * ========================================================================== */
+
+/* NURBURGRING — Nordschleife abbreviata, tecnico e collinoso per GT. */
+const NURBURGRING_GT = T({
+    id:"nurburgring_gt", name:"Nürburgring GP", country:"DEU", champFamily:"GT",
+    type:"closed", lengthKm:5.148, lapRecordSec:95.0,
+    waypoints:[
+        [400,860],[500,850],[600,840],[700,830],
+        [780,800],[760,730],[700,700],[620,710],
+        [540,720],[460,710],[400,680],[380,620],
+        [420,560],[500,540],[580,550],[660,580],
+        [720,620],[760,680],[780,610],[740,540],
+        [680,490],[600,480],[520,500],[460,530],
+        [420,580],[380,630],[360,700],[350,780],
+    ],
+    finishIndex:0,
+    features:["technical","forest","elevation","german"],
+    overtakingDifficulty:0.55, tyreStress:0.65, elevationChange:0.50, drsZones:0, fuelEffect:0.35,
+    sectors:3, corners:15, trackWidth:0.75,
+    firstHeld:1984, lapRecordHolder:"-", lapRecordYear:0,
+    description:"Circuito tecnico nella foresta Eifel. Dislivello e meteo variabile: prova completa per le GT.",
+});
+
+/* BARCELONA — Catalunya: tecnico, sector 3 decisivo per tempo. */
+const BARCELONA = T({
+    id:"barcelona", name:"Circuit de Barcelona-Catalunya", country:"ESP", champFamily:"GT",
+    type:"closed", lengthKm:4.655, lapRecordSec:78.0,
+    waypoints:[
+        [400,850],[500,860],[600,850],[700,820],
+        [760,770],[740,700],[680,690],[620,710],
+        [560,730],[500,720],[460,670],[500,610],
+        [580,590],[660,600],[740,610],[780,560],
+        [760,490],[700,480],[640,500],[600,540],
+        [560,520],[620,480],[680,460],[660,400],
+        [600,390],[520,410],[460,450],[420,520],
+        [380,600],[360,700],[370,800],
+    ],
+    finishIndex:0,
+    features:["technical","flowing","test_circuit","mediterranean"],
+    overtakingDifficulty:0.65, tyreStress:0.55, elevationChange:0.35, drsZones:1, fuelEffect:0.30,
+    sectors:3, corners:16, trackWidth:0.75,
+    firstHeld:1991, lapRecordHolder:"-", lapRecordYear:0,
+    description:"Circuito dei test invernali. Il sector 3 finale è la chiave: chi chiude bene qui fa il tempo.",
+});
+
+/* MONZA GT — variante più stretta per GT3 (riuso base) */
+const MONZA_GT = T({ ...MONZA, id:"monza_gt", champFamily:"GT", lengthKm:5.793, trackWidth:0.70 });
+
+/* SPA GT — per GT World Challenge */
+const SPA_GT = T({ ...SPA, id:"spa_gt", champFamily:"GT" });
+
+/* =============================================================================
+ * CIRCUITI TOURING CAR
+ * ========================================================================== */
+
+/* MACAU — street circuit leggendario per WTCC/WTCR, stretto e pericoloso. */
+const MACAU = T({
+    id:"macau", name:"Circuito da Guia (Macau)", country:"MAC", champFamily:"TouringCar",
+    type:"closed", lengthKm:6.120, lapRecordSec:125.0,
+    waypoints:[
+        [200,850],[320,860],[440,850],[560,840],
+        [660,810],[700,750],[680,680],[620,660],
+        [560,680],[500,700],[460,670],[440,610],
+        [480,550],[540,530],[600,550],[640,600],
+        [620,660],[560,670],[500,650],[460,610],
+        [420,550],[400,480],[440,410],[500,380],
+        [560,400],[580,460],[540,510],[480,490],
+        [420,470],[380,420],[400,360],[460,330],
+        [540,340],[600,370],[580,430],[520,450],
+        [460,430],[400,400],[350,450],[320,520],
+        [300,600],[290,700],[280,800],
+    ],
+    finishIndex:0,
+    features:["street","tight","dangerous","iconic","melbourne_hairpin"],
+    overtakingDifficulty:0.90, tyreStress:0.40, elevationChange:0.45, drsZones:0, fuelEffect:0.30,
+    sectors:3, corners:23, trackWidth:0.30,
+    firstHeld:1954, lapRecordHolder:"-", lapRecordYear:0,
+    description:"Street circuit leggendario. Stretto, veloce, muri ovunque: la gara di touring car più pericolosa al mondo.",
+});
+
+/* THAI BURIRAM — Chang International, circuito moderno per WTCR. */
+const BURIRAM = T({
+    id:"buriram", name:"Chang International Circuit", country:"THA", champFamily:"TouringCar",
+    type:"closed", lengthKm:4.554, lapRecordSec:82.0,
+    waypoints:[
+        [400,850],[520,860],[640,850],[740,820],
+        [780,760],[760,690],[700,670],[620,680],
+        [540,700],[460,690],[400,660],[380,600],
+        [420,540],[500,520],[580,540],[660,560],
+        [740,570],[800,540],[820,480],[780,420],
+        [700,410],[620,430],[540,460],[480,490],
+        [420,510],[380,560],[360,650],[360,750],
+    ],
+    finishIndex:0,
+    features:["modern","technical","asia","flowing"],
+    overtakingDifficulty:0.50, tyreStress:0.50, elevationChange:0.15, drsZones:1, fuelEffect:0.30,
+    sectors:3, corners:14, trackWidth:0.78,
+    firstHeld:2014, lapRecordHolder:"-", lapRecordYear:0,
+    description:"Circuito moderno in Thailandia. Tecnico e flusso continuo: ottimo per il sorpasso tra touring car.",
+});
+
+/* INTERLAGOS TC — per Stock Car Brasil (riuso base, famiglia diversa) */
+const INTERLAGOS_TC = T({ ...INTERLAGOS, id:"interlagos_tc", champFamily:"TouringCar" });
+
+/* =============================================================================
+ * PROVE SPECIALI RALLY REGIONALI
+ * ========================================================================== */
+
+/* SS AZORES — Rally Açores, terra vulcanica, salti, paesaggio lunare. */
+const SS_AZORES = T({
+    id:"ss_azores", name:"SS Rally Açores — Sete Cidades", country:"PRT", champFamily:"Rally",
+    type:"open", lengthKm:18.5, lapRecordSec:720,
+    waypoints:[
+        [100,840],[180,780],[140,700],[220,650],[180,580],
+        [260,540],[340,580],[300,640],[380,680],[440,640],
+        [380,580],[460,520],[540,560],[500,620],[580,660],
+        [640,620],[600,560],[680,500],[760,540],[720,600],
+        [800,640],[860,580],[820,500],[880,420],[900,340],
+    ],
+    finishIndex:0,
+    surface:"gravel",
+    features:["volcanic","crests","scenic","island"],
+    overtakingDifficulty:0.70, tyreStress:0.55, elevationChange:0.65, drsZones:0, fuelEffect:0.35,
+    sectors:3, corners:28, trackWidth:0.50,
+    firstHeld:1965, lapRecordHolder:"-", lapRecordYear:0,
+    description:"Terra vulcanica delle Azzorre. Crest ciechi e paesaggio lunare: unico nel calendario ERC.",
+});
+
+/* SS IVORY COAST — Rally Costa d'Avorio, Africa, caldo e sabbia. */
+const SS_IVORY = T({
+    id:"ss_ivory", name:"SS Rallye d'Ivoire — Yamoussoukro", country:"CIV", champFamily:"Rally",
+    type:"open", lengthKm:22.0, lapRecordSec:840,
+    waypoints:[
+        [100,850],[220,830],[300,780],[260,700],[340,650],
+        [420,690],[380,600],[460,560],[540,600],[500,520],
+        [580,480],[660,520],[620,600],[700,640],[780,600],
+        [740,520],[820,480],[880,420],[840,340],[760,320],
+        [680,360],[600,340],[520,360],[440,400],[380,460],
+        [300,500],[240,560],[200,640],[160,720],[140,800],
+    ],
+    finishIndex:0,
+    surface:"gravel",
+    features:["africa","heat","dust","tropical"],
+    overtakingDifficulty:0.65, tyreStress:0.65, elevationChange:0.35, drsZones:0, fuelEffect:0.55,
+    sectors:3, corners:30, trackWidth:0.55,
+    firstHeld:1978, lapRecordHolder:"-", lapRecordYear:0,
+    description:"Rally africano: caldo torrido, polvere e piste larghe. La meccanica soffre per le temperature.",
+});
+
+/* SS JAPAN — Rally Giappone, asfalto stretto montano. */
+const SS_JAPAN = T({
+    id:"ss_japan", name:"SS Rally Japan — Rikubetsu", country:"JPN", champFamily:"Rally",
+    type:"open", lengthKm:20.0, lapRecordSec:760,
+    waypoints:[
+        [100,860],[180,800],[140,730],[220,680],[180,610],
+        [260,560],[340,600],[300,540],[380,490],[460,530],
+        [420,590],[500,630],[560,590],[520,510],[600,470],
+        [680,510],[640,580],[720,620],[780,580],[740,500],
+        [820,460],[880,400],[840,320],[760,300],[680,340],
+    ],
+    finishIndex:0,
+    surface:"asphalt",
+    features:["mountain","tight","forest","asphalt"],
+    overtakingDifficulty:0.80, tyreStress:0.45, elevationChange:0.70, drsZones:0, fuelEffect:0.30,
+    sectors:3, corners:32, trackWidth:0.40,
+    firstHeld:1980, lapRecordHolder:"-", lapRecordYear:0,
+    description:"Asfalto montano giapponese, stretto tra le foreste. Tecnico e preciso: richiede pilotaggio da surgeon.",
+});
+
+/* SS ARGENTINA — Rally CODASUR, terra rossa e salti. */
+const SS_ARGENTINA = T({
+    id:"ss_argentina", name:"SS Rally Argentina — El Condor", country:"ARG", champFamily:"Rally",
+    type:"open", lengthKm:24.0, lapRecordSec:880,
+    waypoints:[
+        [100,840],[200,800],[280,740],[240,660],[320,620],
+        [400,660],[360,580],[440,540],[520,580],[480,500],
+        [560,460],[640,500],[600,580],[680,620],[760,580],
+        [720,500],[800,460],[860,400],[820,320],[740,340],
+        [660,380],[580,360],[500,400],[420,440],[340,480],
+        [280,540],[240,620],[200,700],[160,780],
+    ],
+    finishIndex:0,
+    surface:"gravel",
+    features:["red_dirt","jumps","fans","south_america"],
+    overtakingDifficulty:0.65, tyreStress:0.60, elevationChange:0.75, drsZones:0, fuelEffect:0.40,
+    sectors:3, corners:35, trackWidth:0.55,
+    firstHeld:1980, lapRecordHolder:"-", lapRecordYear:0,
+    description:"Terra rossa e salti spettacolari. I tifosi argentini sono i più appassionati del mondo rally.",
+});
+
+/* SS MIDDLE EAST — Rally MERC, sabbia e caldo. */
+const SS_MIDEAST = T({
+    id:"ss_mideast", name:"SS Middle East Rally — Jordan", country:"JOR", champFamily:"Rally",
+    type:"open", lengthKm:19.0, lapRecordSec:700,
+    waypoints:[
+        [100,850],[200,800],[280,730],[240,650],[320,600],
+        [400,640],[360,560],[440,520],[520,560],[480,480],
+        [560,440],[640,480],[600,560],[680,600],[760,560],
+        [720,480],[800,440],[860,380],[820,300],[740,320],
+    ],
+    finishIndex:0,
+    surface:"gravel",
+    features:["desert","heat","dust","rocks"],
+    overtakingDifficulty:0.70, tyreStress:0.70, elevationChange:0.40, drsZones:0, fuelEffect:0.55,
+    sectors:3, corners:25, trackWidth:0.50,
+    firstHeld:1981, lapRecordHolder:"-", lapRecordYear:0,
+    description:"Piste desertiche in Giordania. Sabbia, rocce e caldo: la meccanica viene messa a dura prova.",
+});
+
+/* SS MEXICO — Rally NACAM, alta quota e terra. */
+const SS_MEXICO = T({
+    id:"ss_mexico", name:"SS Rally Mexico — Guanajuato", country:"MEX", champFamily:"Rally",
+    type:"open", lengthKm:21.0, lapRecordSec:780,
+    waypoints:[
+        [100,860],[180,800],[240,730],[200,650],[280,610],
+        [360,650],[320,570],[400,530],[480,570],[440,490],
+        [520,450],[600,490],[560,570],[640,610],[720,570],
+        [680,490],[760,450],[820,390],[780,310],[700,330],
+        [620,370],[540,350],[460,390],[380,430],
+    ],
+    finishIndex:0,
+    surface:"gravel",
+    features:["altitude","dust","fans","vibrant"],
+    overtakingDifficulty:0.68, tyreStress:0.62, elevationChange:0.55, drsZones:0, fuelEffect:0.50,
+    sectors:3, corners:28, trackWidth:0.52,
+    firstHeld:1978, lapRecordHolder:"-", lapRecordYear:0,
+    description:"Alta quota a Guanajuato. Meno ossigeno = meno potenza, e le strade polverose sono scivolose.",
+});
+
+/* SS REGIONALI — prova amatoriale generica su asfalto+terra. */
+const SS_REGIONAL = T({
+    id:"ss_regional", name:"SS Rally Cup Regionale — Colline", country:"ITA", champFamily:"Rally",
+    type:"open", lengthKm:12.0, lapRecordSec:480,
+    waypoints:[
+        [100,840],[180,780],[220,700],[300,650],[260,580],
+        [340,530],[420,570],[380,490],[460,450],[540,490],
+        [500,410],[580,370],[660,410],[620,490],[700,530],
+        [760,470],[820,410],[780,330],[700,310],[620,350],
+    ],
+    finishIndex:0,
+    surface:"asphalt",
+    features:["amateur","mixed_surface","hills","regional"],
+    overtakingDifficulty:0.75, tyreStress:0.40, elevationChange:0.50, drsZones:0, fuelEffect:0.25,
+    sectors:3, corners:20, trackWidth:0.45,
+    firstHeld:1990, lapRecordHolder:"-", lapRecordYear:0,
+    description:"Prova amatoriale regionale su strade collinari. Misto asfalto-terra: la passione a livello locale.",
+});
+
+/* =============================================================================
+ * CIRCUITI RALLYCROSS
+ * ========================================================================== */
+
+/* HOLKEN — circuito rallycross svedese, corto con joker lap. */
+const HOLJES = T({
+    id:"holjes", name:"Höljes Motorstadion", country:"SWE", champFamily:"Rallycross",
+    type:"closed", lengthKm:1.150, lapRecordSec:50.0,
+    waypoints:[
+        [400,800],[520,810],[600,790],[640,740],
+        [600,690],[540,680],[460,690],[420,650],   // joker merge
+        [480,620],[560,610],[640,620],[700,650],
+        [740,690],[720,740],[660,770],[580,780],
+    ],
+    finishIndex:0,
+    features:["short","mixed_surface","joker_lap","banking","swedish"],
+    overtakingDifficulty:0.40, tyreStress:0.30, elevationChange:0.30, drsZones:0, fuelEffect:0.15,
+    sectors:1, corners:8, trackWidth:0.65,
+    firstHeld:1974, lapRecordHolder:"-", lapRecordYear:0,
+    description:"Il tempio del rallycross. Corto, misto asfalto-terra, joker lap decisiva: spettacolo garantito.",
+});
+
+/* LOHEAC — circuito rallycross francese. */
+const LOHEAC = T({
+    id:"loheac", name:"Circuit de Loheac", country:"FRA", champFamily:"Rallycross",
+    type:"closed", lengthKm:1.050, lapRecordSec:48.0,
+    waypoints:[
+        [400,820],[500,830],[580,810],[640,760],
+        [600,700],[540,690],[480,700],[440,660],
+        [500,630],[580,620],[660,640],[720,670],
+        [740,720],[700,760],[620,790],[520,800],
+    ],
+    finishIndex:0,
+    features:["short","mixed_surface","joker_lap","french"],
+    overtakingDifficulty:0.45, tyreStress:0.28, elevationChange:0.20, drsZones:0, fuelEffect:0.12,
+    sectors:1, corners:7, trackWidth:0.65,
+    firstHeld:1976, lapRecordHolder:"-", lapRecordYear:0,
+    description:"Circuito francese di rallycross. Tecnico e scenografico: la folla è a pochi metri dalle auto.",
+});
+
+/* AUTOCROSS TRACK — generico per autocross camp. */
+const AUTOCROSS_TRACK = T({
+    id:"autocross_track", name:"Autocross Circuit", country:"EUR", champFamily:"Rallycross",
+    type:"closed", lengthKm:0.800, lapRecordSec:38.0,
+    waypoints:[
+        [400,800],[500,810],[580,790],[620,740],
+        [580,690],[500,680],[440,700],[400,660],
+        [480,630],[560,620],[620,640],[660,680],
+        [680,730],[640,770],[560,790],
+    ],
+    finishIndex:0,
+    features:["dirt_only","short","amateur","offroad"],
+    overtakingDifficulty:0.50, tyreStress:0.25, elevationChange:0.15, drsZones:0, fuelEffect:0.10,
+    sectors:1, corners:6, trackWidth:0.60,
+    firstHeld:1980, lapRecordHolder:"-", lapRecordYear:0,
+    description:"Circuito di terra per autocross. Breve e tortuoso: pureoffroad senza asfalto.",
+});
+
+/* =============================================================================
+ * TAPPE RAID ADDIZIONALI (W2RC, Baja Cup)
+ * ========================================================================== */
+
+/* TAPPA BAJA — sprint raid nel deserto (Baja Cup). */
+const BAJA_DESERT = T({
+    id:"baja_desert", name:"Baja — Desert Sprint", country:"MEX", champFamily:"Raid",
+    type:"open", lengthKm:280, lapRecordSec:7200,
+    waypoints:[
+        [100,840],[220,820],[340,830],[460,810],[580,820],
+        [700,800],[780,750],[740,670],[660,650],[580,670],
+        [500,650],[420,670],[340,650],[280,610],[340,560],
+        [420,580],[500,560],[580,580],[660,560],[740,540],
+        [820,510],[880,450],[840,370],[760,350],[680,380],
+        [600,360],[520,390],[440,410],[360,380],
+    ],
+    finishIndex:0,
+    surface:"sand",
+    features:["desert","highspeed","endurance","navigation"],
+    overtakingDifficulty:0.75, tyreStress:0.85, elevationChange:0.35, drsZones:0, fuelEffect:0.65,
+    sectors:3, corners:30, trackWidth:0.70,
+    firstHeld:1967, lapRecordHolder:"-", lapRecordYear:0,
+    description:"Sprint nel deserto della Baja. Piste veloci e polverose: resistenza meccanica e navigazione.",
+});
+
+/* TAPPA ATACAMA — W2RC, deserto cileno ultra-secco. */
+const ATACAMA = T({
+    id:"atacama", name:"W2RC — Atacama Crossing", country:"CHL", champFamily:"Raid",
+    type:"open", lengthKm:320, lapRecordSec:8400,
+    waypoints:[
+        [100,860],[240,840],[380,850],[520,830],[660,840],
+        [780,810],[860,750],[820,670],[740,650],[660,670],
+        [580,650],[500,670],[420,650],[340,630],[280,580],
+        [340,530],[420,550],[500,530],[580,550],[660,530],
+        [740,510],[820,480],[880,420],[840,340],[760,320],
+        [680,360],[600,340],[520,370],
+    ],
+    finishIndex:0,
+    surface:"gravel",
+    features:["desert","dry","altitude","navigation","endurance"],
+    overtakingDifficulty:0.80, tyreStress:0.80, elevationChange:0.50, drsZones:0, fuelEffect:0.70,
+    sectors:3, corners:40, trackWidth:0.65,
+    firstHeld:2010, lapRecordHolder:"-", lapRecordYear:0,
+    description:"Deserto di Atacama, il più arido al mondo. Polvere fine ovunque, alta quota, navigazione critica.",
+});
+
+/* =============================================================================
+ * CIRCUITI BIKE ADDIZIONALI (WSBK, Supersport, EWC)
+ * ========================================================================== */
+
+/* ARAGON — Motorland Aragon, tecnico e variato per WSBK. */
+const ARAGON = T({
+    id:"aragon", name:"Motorland Aragón", country:"ESP", champFamily:"Bike",
+    type:"closed", lengthKm:5.077, lapRecordSec:93.0,
+    waypoints:[
+        [400,850],[500,860],[600,850],[700,830],
+        [780,790],[760,720],[700,700],[620,710],
+        [540,720],[460,710],[420,660],[460,600],
+        [540,580],[620,600],[700,610],[780,590],
+        [820,530],[780,470],[700,460],[620,480],
+        [540,500],[480,530],[440,580],[400,630],
+        [380,700],[370,780],
+    ],
+    finishIndex:0,
+    features:["technical","flowing","variety","spanish"],
+    overtakingDifficulty:0.50, tyreStress:0.50, elevationChange:0.40, drsZones:0, fuelEffect:0.30,
+    sectors:3, corners:17, trackWidth:0.75,
+    firstHeld:2009, lapRecordHolder:"-", lapRecordYear:0,
+    description:"Circuito tecnico e variato. Disegnata da Hermann Tilke: mix di curve lente e veloci per bike.",
+});
+
+/* PORTIMAO — Autodromo do Algarve, collinoso e tecnico. */
+const PORTIMAO = T({
+    id:"portimao", name:"Autódromo do Algarve (Portimão)", country:"PRT", champFamily:"Bike",
+    type:"closed", lengthKm:4.692, lapRecordSec:90.0,
+    waypoints:[
+        [400,840],[500,850],[600,840],[700,820],
+        [780,770],[760,700],[700,680],[620,690],
+        [540,700],[460,690],[400,650],[420,590],
+        [500,570],[580,580],[660,590],[740,580],
+        [800,540],[820,470],[780,410],[700,420],
+        [620,440],[540,460],[480,490],[440,540],
+        [400,600],[370,700],[380,780],
+    ],
+    finishIndex:0,
+    features:["hilly","technical","flowing","portuguese"],
+    overtakingDifficulty:0.60, tyreStress:0.55, elevationChange:0.55, drsZones:0, fuelEffect:0.30,
+    sectors:3, corners:16, trackWidth:0.72,
+    firstHeld:2008, lapRecordHolder:"-", lapRecordYear:0,
+    description:"Collinoso e tecnico nell'Algarve. Dislivello importante: le bike si sbilanciano nelle curve cieche.",
+});
+
+/* SLOVAKIARING — per FIM EWC endurance bike. */
+const SLOVAKIARING = T({
+    id:"slovakiaring", name:"Slovakia Ring", country:"SVK", champFamily:"Bike",
+    type:"closed", lengthKm:5.922, lapRecordSec:115.0,
+    waypoints:[
+        [400,850],[520,860],[640,850],[760,830],
+        [840,780],[820,710],[760,680],[680,700],
+        [600,720],[520,710],[460,680],[440,620],
+        [480,560],[560,540],[640,550],[720,560],
+        [800,540],[840,480],[820,410],[760,390],
+        [680,410],[600,430],[520,460],[460,500],
+        [420,560],[400,630],[390,720],[395,800],
+    ],
+    finishIndex:0,
+    features:["long","technical","endurance","slovak"],
+    overtakingDifficulty:0.45, tyreStress:0.45, elevationChange:0.25, drsZones:0, fuelEffect:0.30,
+    sectors:3, corners:16, trackWidth:0.80,
+    firstHeld:2009, lapRecordHolder:"-", lapRecordYear:0,
+    description:"Circuito lungo e tecnico in Slovacchia. Sede di gare endurance bike: la regularità è tutto.",
+});
+
+/* =============================================================================
+ * CIRCUITI MOTOCROSS / OFFROAD BIKE
+ * ========================================================================== */
+
+/* MXGP MANTOVA — circuito motocross in terra, salti continui. */
+const MX_MANTOVA = T({
+    id:"mx_mantova", name:"Mantova MXGP", country:"ITA", champFamily:"Motocross",
+    type:"closed", lengthKm:1.850, lapRecordSec:105.0,
+    waypoints:[
+        [400,800],[500,810],[560,780],[580,730],
+        [540,690],[480,690],[440,710],[400,690],
+        [380,640],[420,600],[480,590],[540,610],
+        [580,640],[620,680],[660,710],[680,760],
+        [660,800],[600,810],[520,810],
+    ],
+    finishIndex:0,
+    surface:"dirt",
+    features:["dirt","jumps","whoops","italian","mxgp"],
+    overtakingDifficulty:0.60, tyreStress:0.20, elevationChange:0.30, drsZones:0, fuelEffect:0.10,
+    sectors:1, corners:12, trackWidth:0.55,
+    firstHeld:1980, lapRecordHolder:"-", lapRecordYear:0,
+    description:"Circuito motocross in terra. Salti, whoops e ruts: fisicamente estremo, chi cede per primo perde.",
+});
+
+/* MXGP VILLADEVERO — terra sabbiosa, velocissimo. */
+const MX_VILLADEVERO = T({
+    id:"mx_villadevero", name:"Villadevero MXGP", country:"ESP", champFamily:"Motocross",
+    type:"closed", lengthKm:1.750, lapRecordSec:100.0,
+    waypoints:[
+        [400,820],[500,830],[600,820],[680,790],
+        [700,730],[660,680],[580,670],[500,680],
+        [440,700],[400,670],[380,620],[440,590],
+        [520,580],[600,600],[660,630],[700,680],
+        [680,750],[600,800],[500,820],
+    ],
+    finishIndex:0,
+    surface:"dirt",
+    features:["sandy_dirt","fast","jumps","spanish"],
+    overtakingDifficulty:0.55, tyreStress:0.25, elevationChange:0.25, drsZones:0, fuelEffect:0.10,
+    sectors:1, corners:10, trackWidth:0.58,
+    firstHeld:1995, lapRecordHolder:"-", lapRecordYear:0,
+    description:"Terra sabbiosa spagnola. Veloce e scorrevole: chi ha il coraggio nei salti guadagna.",
+});
+
+/* SUPERENDURO ARENA — indoor, ostacoli, tronchi, pietre. */
+const SE_ARENA = T({
+    id:"se_arena", name:"SuperEnduro Arena", country:"INT", champFamily:"Motocross",
+    type:"closed", lengthKm:0.500, lapRecordSec:45.0,
+    waypoints:[
+        [400,780],[480,790],[540,770],[560,720],
+        [520,680],[460,670],[420,690],[400,650],
+        [440,620],[500,610],[560,630],[580,680],
+        [600,730],[560,770],[480,780],
+    ],
+    finishIndex:0,
+    surface:"dirt",
+    features:["indoor","obstacles","logs","rocks","extreme"],
+    overtakingDifficulty:0.80, tyreStress:0.15, elevationChange:0.40, drsZones:0, fuelEffect:0.05,
+    sectors:1, corners:8, trackWidth:0.40,
+    firstHeld:2000, lapRecordHolder:"-", lapRecordYear:0,
+    description:"Arena indoor con ostacoli estremi: tronchi, massi, gradoni. Chi tocca terra con i piedi perde punti.",
+});
+
+/* TRIAL SECTION — zona di osservazione trial (no tempo, penalità). */
+const TRIAL_SECTION = T({
+    id:"trial_section", name:"Trial Section — Mont-ROCK", country:"ESP", champFamily:"Trial",
+    type:"closed", lengthKm:0.050, lapRecordSec:0,
+    waypoints:[
+        [450,750],[470,720],[490,700],[510,680],
+        [500,650],[480,630],[500,610],[520,590],
+        [500,570],[480,550],[500,530],
+    ],
+    finishIndex:0,
+    surface:"rock",
+    features:["observed","no_time","penalty","rocks","extreme"],
+    overtakingDifficulty:0.95, tyreStress:0.10, elevationChange:0.70, drsZones:0, fuelEffect:0.05,
+    sectors:0, corners:8, trackWidth:0.15,
+    firstHeld:1975, lapRecordHolder:"-", lapRecordYear:0,
+    description:"Sezione di trial osservata. Non conta il tempo ma le penalità: ogni appoggio terra costa punti.",
+});
+
+/* SPEEDWAY CARDIFF — Principality Stadium, ovale terra indoor. */
+const SPEEDWAY_CARDIFF = T({
+    id:"speedway_cardiff", name:"Speedway GP — Cardiff", country:"GBR", champFamily:"Speedway",
+    type:"closed", lengthKm:0.260, lapRecordSec:60.0,
+    waypoints:[
+        [400,800],[500,810],[600,800],[660,750],
+        [640,690],[560,680],[480,690],[440,670],
+        [480,640],[560,630],[640,650],[700,690],
+        [680,750],[600,790],[500,800],
+    ],
+    finishIndex:0,
+    surface:"dirt",
+    features:["oval","dirt","no_brakes","indoor","drift"],
+    overtakingDifficulty:0.50, tyreStress:0.10, elevationChange:0.05, drsZones:0, fuelEffect:0.08,
+    sectors:1, corners:4, trackWidth:0.60,
+    firstHeld:2001, lapRecordHolder:"-", lapRecordYear:0,
+    description:"Ovale di terra nello stadio di Cardiff. 4 giri, niente freni, derapata controllata: puro adrenaline.",
+});
+
+/* =============================================================================
+ * CIRCUITI KARTING
+ * ========================================================================== */
+
+/* KARTING LONATO — circuito kart italiano, lungo e tecnico. */
+const KART_LONATO = T({
+    id:"kart_lonato", name:"South Garda Karting (Lonato)", country:"ITA", champFamily:"Karting",
+    type:"closed", lengthKm:1.200, lapRecordSec:55.0,
+    waypoints:[
+        [400,820],[500,830],[580,810],[620,760],
+        [600,700],[540,690],[480,700],[440,670],
+        [480,630],[540,620],[600,640],[660,670],
+        [700,720],[680,780],[620,810],
+    ],
+    finishIndex:0,
+    features:["kart","technical","italian","long"],
+    overtakingDifficulty:0.55, tyreStress:0.25, elevationChange:0.10, drsZones:0, fuelEffect:0.10,
+    sectors:1, corners:10, trackWidth:0.50,
+    firstHeld:1988, lapRecordHolder:"-", lapRecordYear:0,
+    description:"Uno dei kartodromi più tecnici d'Europa. Lungo e con curvoni: dove nascono i campioni.",
+});
+
+/* KARTING GENK — circuito kart belga. */
+const KART_GENK = T({
+    id:"kart_genk", name:"Karting Genk", country:"BEL", champFamily:"Karting",
+    type:"closed", lengthKm:1.360, lapRecordSec:58.0,
+    waypoints:[
+        [400,830],[500,840],[600,830],[680,800],
+        [700,740],[660,690],[580,680],[500,690],
+        [440,670],[420,610],[480,590],[560,600],
+        [640,610],[700,640],[740,690],[720,760],
+        [660,800],[560,830],
+    ],
+    finishIndex:0,
+    features:["kart","flowing","belgian","technical"],
+    overtakingDifficulty:0.50, tyreStress:0.25, elevationChange:0.08, drsZones:0, fuelEffect:0.10,
+    sectors:1, corners:12, trackWidth:0.52,
+    firstHeld:1985, lapRecordHolder:"-", lapRecordYear:0,
+    description:"Kartodromo belga, flusso continuo e tecnico. Sede dei campionati europei karting.",
+});
+
+/* KARTING REGIONALE — kartodromo amatoriale generico. */
+const KART_REGIONAL = T({
+    id:"kart_regional", name:"Kartodromo Regionale", country:"ITA", champFamily:"Karting",
+    type:"closed", lengthKm:0.900, lapRecordSec:45.0,
+    waypoints:[
+        [400,800],[500,810],[580,790],[620,740],
+        [580,690],[500,680],[440,700],[420,660],
+        [480,630],[560,620],[620,650],[660,700],
+        [640,770],[560,800],
+    ],
+    finishIndex:0,
+    features:["kart","amateur","regional","short"],
+    overtakingDifficulty:0.60, tyreStress:0.20, elevationChange:0.05, drsZones:0, fuelEffect:0.08,
+    sectors:1, corners:8, trackWidth:0.48,
+    firstHeld:1995, lapRecordHolder:"-", lapRecordYear:0,
+    description:"Kartodromo amatoriale. Breve e tortuoso: la scuola per i futuri campioni a livello locale.",
+});
+
+/* =============================================================================
+ * CIRCUITI SPECIAL (TRUCK, DRAG, HILLCLIMB, MONOMARCA)
+ * ========================================================================== */
+
+/* NURBURGRING TRUCK — per ETRC (riuso base). */
+const NURBURGRING_TRUCK = T({ ...NURBURGRING_GT, id:"nurburgring_truck", champFamily:"Truck", trackWidth:0.85 });
+
+/* LE MANS TRUCK — Bugatti circuit, più corto per truck. */
+const LEMANS_TRUCK = T({
+    id:"lemans_truck", name:"Circuit Bugatti (Le Mans)", country:"FRA", champFamily:"Truck",
+    type:"closed", lengthKm:4.185, lapRecordSec:95.0,
+    waypoints:[
+        [400,850],[500,860],[600,850],[700,830],
+        [780,780],[760,710],[700,690],[620,700],
+        [540,710],[460,700],[400,670],[380,610],
+        [420,550],[500,530],[580,540],[660,560],
+        [740,570],[800,550],[820,490],[780,430],
+        [700,420],[620,440],[540,470],[480,500],
+        [420,530],[380,580],[370,650],[370,750],
+    ],
+    finishIndex:0,
+    features:["technical","french","truck","bugatti"],
+    overtakingDifficulty:0.45, tyreStress:0.50, elevationChange:0.20, drsZones:0, fuelEffect:0.40,
+    sectors:3, corners:14, trackWidth:0.85,
+    firstHeld:1965, lapRecordHolder:"-", lapRecordYear:0,
+    description:"Circuito Bugatti a Le Mans, usato per truck racing. Tecnico e adatto ai mezzi pesanti.",
+});
+
+/* DRAG STRIP — Santa Pod, 1/4 miglio. */
+const DRAG_STRIP = T({
+    id:"drag_strip", name:"Santa Pod Raceway", country:"GBR", champFamily:"Drag",
+    type:"open", lengthKm:0.402, lapRecordSec:4.5,
+    waypoints:[
+        [100,500],[200,500],[300,500],[400,500],[500,500],
+        [600,500],[700,500],[800,500],[900,500],
+    ],
+    finishIndex:0,
+    surface:"asphalt",
+    features:["dragstrip","quarter_mile","straight","prepped"],
+    overtakingDifficulty:1.0, tyreStress:0.15, elevationChange:0.0, drsZones:0, fuelEffect:0.0,
+    sectors:1, corners:0, trackWidth:0.35,
+    firstHeld:1966, lapRecordHolder:"-", lapRecordYear:0,
+    description:"Drag strip di 402 metri. 0-400km/h in pochi secondi: reazione alla partenza e coraggio.",
+});
+
+/* HILL CLIMB — Pikes Peak, salita cronometrata leggendaria. */
+const PIKES_PEAK = T({
+    id:"pikes_peak", name:"Pikes Peak International Hill Climb", country:"USA", champFamily:"HillClimb",
+    type:"open", lengthKm:19.99, lapRecordSec:540,
+    waypoints:[
+        [100,900],[180,840],[140,770],[220,720],[180,650],
+        [260,600],[320,650],[280,580],[360,530],[420,570],
+        [380,500],[460,450],[520,490],[480,420],[560,370],
+        [620,410],[580,340],[660,290],[720,330],[680,260],
+        [760,210],[820,250],[780,180],[860,130],[900,100],
+    ],
+    finishIndex:0,
+    surface:"asphalt",
+    features:["hillclimb","altitude","legendary","dangerous","asphalt"],
+    overtakingDifficulty:1.0, tyreStress:0.30, elevationChange:1.0, drsZones:0, fuelEffect:0.40,
+    sectors:3, corners:156, trackWidth:0.35,
+    firstHeld:1916, lapRecordHolder:"R. Millen", lapRecordYear:2018,
+    description:"Salita verso le nuvole a 4300m. 156 curve, niente margini, ossigeno rarefatto: la gara verso il cielo.",
+});
+
+/* HILL CLIMB — Trento Bondone, salita italiana. */
+const TRENTO_BONDONE = T({
+    id:"trento_bondone", name:"Trento-Bondone", country:"ITA", champFamily:"HillClimb",
+    type:"open", lengthKm:17.0, lapRecordSec:480,
+    waypoints:[
+        [100,890],[180,830],[140,760],[220,700],[180,630],
+        [260,570],[340,610],[300,540],[380,480],[460,520],
+        [420,450],[500,400],[580,440],[540,370],[620,320],
+        [700,360],[660,290],[740,240],[820,280],[780,200],
+        [860,150],
+    ],
+    finishIndex:0,
+    surface:"asphalt",
+    features:["hillclimb","italian","mountain","technical"],
+    overtakingDifficulty:1.0, tyreStress:0.25, elevationChange:0.90, drsZones:0, fuelEffect:0.35,
+    sectors:3, corners:120, trackWidth:0.30,
+    firstHeld:1925, lapRecordHolder:"-", lapRecordYear:0,
+    description:"Salita del Bondone sopra Trento. Asfalto stretto, curve a gomito: classicità italiana dell'asalita.",
+});
+
+/* MONOMARCA CIRCUIT — generico per monomarca auto (riuso Imola). */
+const MONOMARCA_CIRCUIT = T({ ...IMOLA, id:"monomarca_circuit", champFamily:"GT" });
+
+/* MONOMARCA MOTO CIRCUIT — generico per monomarca moto (riuso Misano). */
+const MONOMARCA_MOTO_CIRCUIT = T({ ...MISANO, id:"monomarca_moto_circuit", champFamily:"Bike" });
+
+/* =============================================================================
  * REGISTRO CENTRALE
  * ========================================================================== */
 const TRACKS = {
+    // Originali
     [MONZA.id]:MONZA, [SILVERSTONE.id]:SILVERSTONE, [MONACO.id]:MONACO,
     [SUZUKA.id]:SUZUKA, [SPA.id]:SPA, [IMOLA.id]:IMOLA, [INTERLAGOS.id]:INTERLAGOS, [ZANDVOORT.id]:ZANDVOORT,
     [JEDDAH.id]:JEDDAH, [AUSTIN.id]:AUSTIN, [HUNGARORING.id]:HUNGARORING, [BAKU.id]:BAKU,
@@ -727,15 +1399,47 @@ const TRACKS = {
     [LEMANS.id]:LEMANS, [FUJI.id]:FUJI, [SEBRING.id]:SEBRING, [SPA_WEC.id]:SPA_WEC,
     [SS_MONTECARLO.id]:SS_MONTECARLO, [SS_FINLANDIA.id]:SS_FINLANDIA, [SS_GB.id]:SS_GB, [SS_KENYA.id]:SS_KENYA,
     [DAKAR_DUNE.id]:DAKAR_DUNE, [DAKAR_DESERTO.id]:DAKAR_DESERTO, [DAKAR_MONTAGNA.id]:DAKAR_MONTAGNA,
+    // GT
+    [NURBURGRING_GT.id]:NURBURGRING_GT, [BARCELONA.id]:BARCELONA, [MONZA_GT.id]:MONZA_GT, [SPA_GT.id]:SPA_GT,
+    // TouringCar
+    [MACAU.id]:MACAU, [BURIRAM.id]:BURIRAM, [INTERLAGOS_TC.id]:INTERLAGOS_TC,
+    // Rally regionali
+    [SS_AZORES.id]:SS_AZORES, [SS_IVORY.id]:SS_IVORY, [SS_JAPAN.id]:SS_JAPAN, [SS_ARGENTINA.id]:SS_ARGENTINA,
+    [SS_MIDEAST.id]:SS_MIDEAST, [SS_MEXICO.id]:SS_MEXICO, [SS_REGIONAL.id]:SS_REGIONAL,
+    // Rallycross
+    [HOLJES.id]:HOLJES, [LOHEAC.id]:LOHEAC, [AUTOCROSS_TRACK.id]:AUTOCROSS_TRACK,
+    // Raid addizionali
+    [BAJA_DESERT.id]:BAJA_DESERT, [ATACAMA.id]:ATACAMA,
+    // Bike addizionali
+    [ARAGON.id]:ARAGON, [PORTIMAO.id]:PORTIMAO, [SLOVAKIARING.id]:SLOVAKIARING,
+    // Motocross / Offroad bike
+    [MX_MANTOVA.id]:MX_MANTOVA, [MX_VILLADEVERO.id]:MX_VILLADEVERO, [SE_ARENA.id]:SE_ARENA,
+    [TRIAL_SECTION.id]:TRIAL_SECTION, [SPEEDWAY_CARDIFF.id]:SPEEDWAY_CARDIFF,
+    // Karting
+    [KART_LONATO.id]:KART_LONATO, [KART_GENK.id]:KART_GENK, [KART_REGIONAL.id]:KART_REGIONAL,
+    // Special
+    [NURBURGRING_TRUCK.id]:NURBURGRING_TRUCK, [LEMANS_TRUCK.id]:LEMANS_TRUCK,
+    [DRAG_STRIP.id]:DRAG_STRIP, [PIKES_PEAK.id]:PIKES_PEAK, [TRENTO_BONDONE.id]:TRENTO_BONDONE,
+    [MONOMARCA_CIRCUIT.id]:MONOMARCA_CIRCUIT, [MONOMARCA_MOTO_CIRCUIT.id]:MONOMARCA_MOTO_CIRCUIT,
 };
 
 /* indice per famiglia (per costruzione calendari) */
 const TRACKS_BY_FAMILY = {
     OpenWheel:[MONZA,SILVERSTONE,MONACO,SUZUKA,SPA,IMOLA,INTERLAGOS,ZANDVOORT,JEDDAH,AUSTIN,HUNGARORING,BAKU],
-    Bike:[MUGELLO,SACHSENRING,MISANO,PHILLIP_ISLAND,ASSEN],
+    Bike:[MUGELLO,SACHSENRING,MISANO,PHILLIP_ISLAND,ASSEN,ARAGON,PORTIMAO,SLOVAKIARING,MONOMARCA_MOTO_CIRCUIT],
     Endurance:[LEMANS,FUJI,SEBRING,SPA_WEC],
-    Rally:[SS_MONTECARLO,SS_FINLANDIA,SS_GB,SS_KENYA],
-    Raid:[DAKAR_DUNE,DAKAR_DESERTO,DAKAR_MONTAGNA],
+    Rally:[SS_MONTECARLO,SS_FINLANDIA,SS_GB,SS_KENYA,SS_AZORES,SS_IVORY,SS_JAPAN,SS_ARGENTINA,SS_MIDEAST,SS_MEXICO,SS_REGIONAL],
+    Raid:[DAKAR_DUNE,DAKAR_DESERTO,DAKAR_MONTAGNA,BAJA_DESERT,ATACAMA],
+    GT:[NURBURGRING_GT,BARCELONA,MONZA_GT,SPA_GT,MONOMARCA_CIRCUIT],
+    TouringCar:[MACAU,BURIRAM,INTERLAGOS_TC],
+    Rallycross:[HOLJES,LOHEAC,AUTOCROSS_TRACK],
+    Motocross:[MX_MANTOVA,MX_VILLADEVERO,SE_ARENA],
+    Trial:[TRIAL_SECTION],
+    Speedway:[SPEEDWAY_CARDIFF],
+    Karting:[KART_LONATO,KART_GENK,KART_REGIONAL],
+    Truck:[NURBURGRING_TRUCK,LEMANS_TRUCK],
+    Drag:[DRAG_STRIP],
+    HillClimb:[PIKES_PEAK,TRENTO_BONDONE],
 };
 
 function getTrack(id) { return TRACKS[id] || null; }

@@ -41,26 +41,86 @@ const MasterUI = (() => {
 
         setTimeout(() => {
             const result = CareerManager.simulateCurrentSession();
+            const completedSession = state.currentSession;
             const advance = CareerManager.advanceSession();
 
             if (result) {
-                renderRaceResult(result);
-                if (state.currentSession === 2 && typeof RenderView !== "undefined") {
-                    RenderView.loadAndPlay(result);
+                renderSessionResult(result, completedSession);
+                if (typeof RenderView !== "undefined") {
+                    if (completedSession === 2) {
+                        // Gara: animazione completa con piloti
+                        RenderView.loadAndPlay(result);
+                    } else {
+                        // Prove libere / Qualifiche: mostra anteprima statica
+                        // del tracciato (evita il "canvas verde" senza animazione)
+                        const round = state.calendar[state.currentRound];
+                        const label = completedSession === 0 ? "📊 PROVE LIBERE" : "🏁 QUALIFICHE";
+                        if (round && round.trackId) {
+                            RenderView.showTrackPreview(round.trackId, label);
+                        }
+                    }
                 }
             }
 
             if (advance.seasonComplete) {
                 $("#statusMsg").textContent = "Stagione conclusa!";
-                btn.textContent = "FINE STAGIONE";
+                btn.textContent = "NUOVA STAGIONE";
+                btn.onclick = _startNextSeason;
+                _showSeasonSummary();
             } else {
                 const nextSess = sessions[CareerManager.getState().currentSession];
-                $("#statusMsg").textContent = `Round ${state.currentRound + 1}: ${nextSess} completata. Prossima: ${sessions[CareerManager.getState().currentSession]}`;
-                btn.textContent = `SIMULA ${sessions[CareerManager.getState().currentSession].toUpperCase()}`;
+                $("#statusMsg").textContent = `Round ${state.currentRound + 1}: ${sessions[completedSession]} completata. Prossima: ${nextSess}`;
+                btn.textContent = `SIMULA ${nextSess.toUpperCase()}`;
             }
             btn.disabled = false;
             refreshAllViews();
         }, 500);
+    }
+
+    /* Renderizza i risultati in base al tipo di sessione (0=practice, 1=qualifying, 2=race) */
+    function renderSessionResult(result, sessionType) {
+        if (sessionType === 0) renderPracticeResult(result);
+        else if (sessionType === 1) renderQualifyingResult(result);
+        else renderRaceResult(result);
+    }
+
+    function renderPracticeResult(result) {
+        $("#resultsTable thead").innerHTML = `<tr><th>#</th><th>Pilota</th><th>Team</th><th>Miglior Giro</th><th>Consistenza</th><th>Setup</th></tr>`;
+        $("#resultsTable tbody").innerHTML = result.results.map((r, i) => `
+            <tr>
+                <td class="pos">${i + 1}</td>
+                <td>${r.driver}</td>
+                <td>${r.team}</td>
+                <td class="time">${r.bestLapStr}</td>
+                <td>${Math.round(r.consistency * 100)}%</td>
+                <td>${Math.round(r.setupConfidence * 100)}%</td>
+            </tr>`).join("");
+        $("#raceLog").innerHTML = `<div class="log-line">📊 Prove Libere completate. Il team ha raccolto dati sul setup e sull'affidabilità.</div>`;
+    }
+
+    function renderQualifyingResult(result) {
+        $("#resultsTable thead").innerHTML = `<tr><th>Grid</th><th>Pilota</th><th>Team</th><th>Tempo Giro</th><th>Gap Pole</th><th>Gap Prec.</th></tr>`;
+        const poleTime = result.grid.length ? result.grid[0].bestLapMs : 0;
+        const playerTeamId = CareerManager.getState()?.playerTeamId;
+        const allTeams = (typeof ALL_TEAMS !== "undefined" && ALL_TEAMS[CareerManager.getState().champId]) || [];
+        const teamColor = (teamName) => (allTeams.find(tm => tm.name === teamName)?.color) || "#888";
+
+        $("#resultsTable tbody").innerHTML = result.grid.map((g, i) => {
+            const gapPole = i === 0 ? "POLE" : `+${((g.bestLapMs - poleTime) / 1000).toFixed(3)}s`;
+            const gapPrev = i === 0 ? "—" : `+${((g.bestLapMs - result.grid[i-1].bestLapMs) / 1000).toFixed(3)}s`;
+            const isPlayer = allTeams.some(tm => tm.name === g.team && tm.id === playerTeamId);
+            const rowStyle = isPlayer ? 'style="font-weight:bold;background:rgba(0,212,255,0.08);"' : '';
+            return `
+            <tr ${rowStyle}>
+                <td class="pos">${i + 1}</td>
+                <td>${g.driver}</td>
+                <td><span style="color:${teamColor(g.team)};">●</span> ${g.team}</td>
+                <td class="time">${g.lapTimeStr}</td>
+                <td>${gapPole}</td>
+                <td style="color:var(--txt-2);">${gapPrev}</td>
+            </tr>`;
+        }).join("");
+        $("#raceLog").innerHTML = `<div class="log-line">🏁 Qualifica completata. La griglia di partenza è stata definita.</div>`;
     }
 
     function bindScouting() { $("#scoutBtn").onclick = scoutNewTalent; }
@@ -74,6 +134,7 @@ const MasterUI = (() => {
         renderStandingsView();
         renderCalendarView();
         renderRaceMeta();
+        renderSponsorsView();
     }
 
     function renderGlobalStats() {
@@ -116,8 +177,31 @@ const MasterUI = (() => {
                     <span>Stipendio: <b style="color:var(--accent-2);">€${(d.salary/1000).toFixed(1)}M</b></span>
                     <span>Contratto: ${d.contractYears}a</span>
                 </div>
+                <button class="btn-secondary driver-release" data-id="${d.id}" style="margin-top:10px; width:100%; color:var(--bad);">
+                    Rilascia Pilota
+                </button>
             </div>`;
         }).join("");
+        $$("#teamContent .driver-release").forEach(b => b.onclick = () => _releaseDriver(b.dataset.id));
+    }
+
+    /* Rilascia un pilota dal team del giocatore (con penale stipendio residuo). */
+    function _releaseDriver(driverId) {
+        const team = CareerManager.getPlayerTeam();
+        if (!team) return;
+        const driver = team.drivers.find(d => d.id === driverId);
+        if (!driver) return;
+        // Penale: 50% dello stipendio residuo per la stagione
+        const penalty = Math.round((driver.salary || 0) * 0.5);
+        if (!CareerManager.trySpend(penalty)) {
+            $("#statusMsg").textContent = "Fondi insufficienti per pagare la penale di rilascio.";
+            return;
+        }
+        team.drivers = team.drivers.filter(d => d.id !== driverId);
+        $("#statusMsg").textContent = `${driver.name} rilasciato. Penale pagata: €${(penalty/1000).toFixed(1)}M.`;
+        renderTeamView();
+        renderFinanceView();
+        renderGlobalStats();
     }
 
     function renderRaceResult(result) {
@@ -355,7 +439,8 @@ const MasterUI = (() => {
         const signCost = 100;
         if (!CareerManager.trySpend(signCost)) { $("#statusMsg").textContent = "Fondi insufficienti per l'ingaggio."; return; }
         const newDriver = { ...driver };
-        delete newDriver.id;
+        // NON cancellare newDriver.id: l'ID è fondamentale per il tracciamento
+        // del pilota (DNF nell'animazione, progressione carriera, standing).
         team.drivers.push(newDriver);
         scoutResults = scoutResults.filter(d => d.id !== driverId);
         $("#statusMsg").textContent = `${newDriver.name} firmato per ${team.name}!`;
@@ -433,6 +518,210 @@ const MasterUI = (() => {
                     <p class="hint" style="margin:6px 0;">${tr.country || ""}${tr.surface?" · "+tr.surface:""}</p>
                 </div>`;
             }).join("")}</div>`;
+    }
+
+    function renderSponsorsView() {
+        if (!CareerManager.isActive()) { $("#sponsorsContent").innerHTML = `<p class="hint">Nessuna carriera attiva.</p>`; return; }
+        const state = CareerManager.getState();
+        const team = CareerManager.getPlayerTeam();
+        const prestige = team?.prestige ?? 50;
+        const sponsorsData = CareerManager.getSponsors();
+        const signed = sponsorsData.signed || [];
+        const ss = sponsorsData.seasonStats || {};
+        const budgetM = (v) => `€${((v||0)/1000).toFixed(1)}M`;
+
+        // Calcola entrate sponsor proiettate per la prossima gara
+        const projectedPerRace = signed.reduce((sum, s) => {
+            return sum + s.basePerRace * (s.tier === "title" ? 1.0 : s.tier === "technical" ? 0.8 : 0.6);
+        }, 0);
+
+        // Sponsor disponibili (non firmati, prestigio sufficiente)
+        const available = (window.SPONSOR_POOL || []).filter(s => {
+            if (signed.some(x => x.id === s.id)) return false;
+            if ((s.prestigeReq || 0) > prestige) return false;
+            const tierInfo = window.SPONSOR_TIERS[s.tier] || { maxSlots: 0 };
+            const sameTier = signed.filter(x => x.tier === s.tier);
+            return sameTier.length < (tierInfo.maxSlots || 0);
+        });
+
+        const tierLabel = { title:"Title", technical:"Technical", partner:"Partner" };
+        const tierColor = { title:"#00d4ff", technical:"#f39c12", partner:"#27ae60" };
+
+        // Card sponsor firmati
+        const signedCards = signed.length ? signed.map(s => {
+            const obj = s.objective || {};
+            const objProgressText = _sponsorObjectiveProgress(s, ss, state);
+            return `
+            <div class="card" style="border-left:3px solid ${s.color || tierColor[s.tier]};">
+                <div style="display:flex; justify-content:space-between; align-items:baseline;">
+                    <h3 style="margin:0;">${s.name}</h3>
+                    <span style="font-size:11px; padding:2px 8px; border-radius:8px; background:${(s.color||tierColor[s.tier])}22; color:${s.color||tierColor[s.tier]};">${tierLabel[s.tier]}</span>
+                </div>
+                <div style="display:flex; gap:16px; margin:8px 0; font-size:12px; flex-wrap:wrap;">
+                    <span>Base/gara: <b style="color:var(--accent);">${budgetM(s.basePerRace)}</b></span>
+                    <span>Bonus vittoria: <b>+${budgetM(s.bonusWin)}</b></span>
+                    <span>Bonus podio: <b>+${budgetM(s.bonusPodium)}</b></span>
+                    <span>Bonus punti: <b>+${s.bonusPoints}K/pt</b></span>
+                </div>
+                ${obj.label ? `
+                <div style="margin-top:8px; padding:8px; background:rgba(255,255,255,0.03); border-radius:4px;">
+                    <div style="font-size:11px; color:var(--txt-2);">📋 Obiettivo: ${obj.label}</div>
+                    <div style="font-size:11px; margin-top:4px;">${objProgressText}</div>
+                    <div style="font-size:11px; color:var(--accent); margin-top:2px;">Premio: ${budgetM(obj.reward || 0)}</div>
+                </div>` : ""}
+                <button class="btn-secondary sponsor-remove" data-id="${s.id}" style="margin-top:10px; color:var(--bad);">Risolvi (penale €300K)</button>
+            </div>`;
+        }).join("") : `<p class="hint">Nessuno sponsor firmato. Cerca sponsor disponibili qui sotto.</p>`;
+
+        // Card sponsor disponibili
+        const availCards = available.length ? available.map(s => {
+            const tierInfo = window.SPONSOR_TIERS[s.tier] || { maxSlots: 0 };
+            return `
+            <div class="card" style="border-left:3px solid ${s.color};">
+                <div style="display:flex; justify-content:space-between; align-items:baseline;">
+                    <h3 style="margin:0;">${s.name}</h3>
+                    <span style="font-size:11px; padding:2px 8px; border-radius:8px; background:${s.color}22; color:${s.color};">${tierLabel[s.tier]}</span>
+                </div>
+                <div style="display:flex; gap:16px; margin:8px 0; font-size:12px; flex-wrap:wrap;">
+                    <span>Base/gara: <b style="color:var(--accent);">${budgetM(s.basePerRace)}</b></span>
+                    <span>Bonus vittoria: <b>+${budgetM(s.bonusWin)}</b></span>
+                    <span>Bonus podio: <b>+${budgetM(s.bonusPodium)}</b></span>
+                </div>
+                ${s.objective ? `
+                <div style="margin-top:6px; font-size:11px; color:var(--txt-2);">📋 ${s.objective.label}</div>
+                <div style="font-size:11px; color:var(--accent);">Premio stagione: ${budgetM(s.objective.reward || 0)}</div>` : ""}
+                <button class="btn-primary sponsor-sign" data-id="${s.id}" style="margin-top:10px;">Firma Sponsor</button>
+            </div>`;
+        }).join("") : `<p class="hint">Nessuno sponsor disponibile per il tuo livello di prestigio attuale.</p>`;
+
+        // Statistiche stagionali
+        const statsBar = `
+        <div class="card" style="margin-bottom:16px;">
+            <h3 style="margin:0 0 10px;">📊 Statistiche Stagionali Sponsor</h3>
+            <div style="display:flex; gap:20px; flex-wrap:wrap; font-size:12px;">
+                <span>Gare disputate: <b>${ss.totalRaces || 0}</b></span>
+                <span style="color:var(--good);">Vittorie: <b>${ss.wins || 0}</b></span>
+                <span style="color:var(--accent);">Podi: <b>${ss.podiums || 0}</b></span>
+                <span>Arrivi: <b>${ss.finishes || 0}</b></span>
+                <span>Gare a punti: <b>${ss.pointsFinishes || 0}</b></span>
+                <span>Top 5 qualifica: <b>${ss.qualTop5 || 0}</b></span>
+            </div>
+            <div style="margin-top:10px; font-size:13px; color:var(--accent);">
+                💰 Entrate sponsor proiettate prossima gara: <b>${budgetM(projectedPerRace)}</b>
+            </div>
+        </div>`;
+
+        $("#sponsorsContent").innerHTML = `
+            ${statsBar}
+            <h3 style="margin:6px 0 10px;">Sponsor Firmati (${signed.length})</h3>
+            <div class="grid-cards">${signedCards}</div>
+            <h3 style="margin:20px 0 10px;">Sponsor Disponibili</h3>
+            <div class="grid-cards">${availCards}</div>`;
+
+        $$("#sponsorsContent .sponsor-sign").forEach(b => b.onclick = () => _signSponsor(b.dataset.id));
+        $$("#sponsorsContent .sponsor-remove").forEach(b => b.onclick = () => _removeSponsor(b.dataset.id));
+    }
+
+    /* Calcola il testo di progressione dell'obiettivo di uno sponsor. */
+    function _sponsorObjectiveProgress(sponsor, ss, state) {
+        const obj = sponsor.objective;
+        if (!obj) return "";
+        let current = 0, target = obj.threshold || 0;
+        switch (obj.type) {
+            case "wins": current = ss.wins || 0; break;
+            case "podiums": current = ss.podiums || 0; break;
+            case "pointsFinish": current = ss.pointsFinishes || 0; break;
+            case "finishRate":
+                const rate = (ss.totalRaces||0) > 0 ? (ss.finishes||0) / ss.totalRaces : 0;
+                return `Progresso: ${Math.round(rate*100)}% / ${Math.round(obj.threshold*100)}%`;
+            case "qualifyingPosition": current = ss.qualTop5 || 0; break;
+            case "championshipPosition":
+                const pos = state.standings.teams.findIndex(t => t.id === state.playerTeamId);
+                return pos >= 0 ? `Posizione attuale: ${pos+1} / target top ${obj.threshold}` : "—";
+        }
+        return `Progresso: ${current} / ${target}`;
+    }
+
+    function _signSponsor(sponsorId) {
+        const res = CareerManager.signSponsor(sponsorId);
+        $("#statusMsg").textContent = res.msg;
+        renderSponsorsView();
+        renderFinanceView();
+        renderGlobalStats();
+    }
+
+    function _removeSponsor(sponsorId) {
+        const res = CareerManager.removeSponsor(sponsorId);
+        $("#statusMsg").textContent = res.msg;
+        renderSponsorsView();
+        renderFinanceView();
+        renderGlobalStats();
+    }
+
+    /* Mostra un riepilogo di fine stagione come modale/overlay. */
+    function _showSeasonSummary() {
+        // Valuta gli obiettivi sponsor prima di mostrare il riepilogo
+        // (il flag interno evita doppi pagamenti quando startNextSeason richiama la stessa funzione)
+        CareerManager._evaluateSponsorObjectives();
+        const summary = CareerManager.getSeasonSummary();
+        if (!summary) return;
+
+        const medal = ["🥇","🥈","🥉"];
+        const teamPosText = summary.teamPosition <= 3 ? medal[summary.teamPosition-1] : `${summary.teamPosition}°`;
+
+        const sponsorRows = summary.sponsorResults.length ? summary.sponsorResults.map(s => `
+            <tr>
+                <td>${s.name}</td>
+                <td>${s.objective || "—"}</td>
+                <td style="color:${s.achieved?'var(--good)':'var(--bad)'};">${s.achieved?'✔ Completato':'✘ Non raggiunto'}</td>
+                <td class="pts">${s.achieved ? `+€${(s.reward/1000).toFixed(1)}M` : '—'}</td>
+            </tr>`).join("") : `<tr><td colspan="4" class="hint">Nessuno sponsor firmato questa stagione.</td></tr>`;
+
+        const driverRows = summary.drivers.length ? summary.drivers.map(d => `
+            <tr><td>${d.name}</td><td class="pts">${d.points} pt</td></tr>`).join("") : "";
+
+        const overlay = document.createElement("div");
+        overlay.id = "seasonOverlay";
+        overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;";
+        overlay.innerHTML = `
+            <div class="card" style="max-width:600px;width:100%;max-height:85vh;overflow-y:auto;">
+                <h2 style="margin-top:0;">🏁 Stagione Conclusa</h2>
+                <div style="display:flex;gap:20px;flex-wrap:wrap;margin-bottom:16px;">
+                    <div class="stat-pill"><span class="k">Posizione Team</span><span class="v">${teamPosText} / ${summary.totalTeams}</span></div>
+                    <div class="stat-pill"><span class="k">Punti Team</span><span class="v">${summary.teamPoints}</span></div>
+                </div>
+                ${driverRows ? `
+                <h3>📋 Risultati Piloti</h3>
+                <div class="table-wrap"><table class="data-table">
+                    <thead><tr><th>Pilota</th><th>Punti</th></tr></thead>
+                    <tbody>${driverRows}</tbody>
+                </table></div>` : ""}
+                <h3 style="margin-top:16px;">💰 Obiettivi Sponsor</h3>
+                <div class="table-wrap"><table class="data-table">
+                    <thead><tr><th>Sponsor</th><th>Obiettivo</th><th>Esito</th><th>Ricompensa</th></tr></thead>
+                    <tbody>${sponsorRows}</tbody>
+                </table></div>
+                <button class="primary" id="btnNextSeason" style="margin-top:20px;width:100%;">INIZIA NUOVA STAGIONE →</button>
+            </div>`;
+
+        document.body.appendChild(overlay);
+        $("#btnNextSeason").onclick = () => {
+            _startNextSeason();
+            overlay.remove();
+        };
+    }
+
+    /* Avvia la transizione alla stagione successiva. */
+    function _startNextSeason() {
+        const res = CareerManager.startNextSeason();
+        if (!res) return;
+
+        const btn = $("#simBtn");
+        btn.textContent = "SIMULA PROSSIMA SESSIONE";
+        btn.onclick = runWeekend;
+
+        $("#statusMsg").textContent = `Stagione ${res.season} iniziata! Bonus budget: €${(res.seasonBonus/1000).toFixed(1)}M`;
+        refreshFromCareer();
     }
 
     function renderRaceMeta() {
