@@ -159,34 +159,85 @@ const RenderView = (() => {
 
     function drawTrackFromWaypoints() {
         if (trackPath.length < 2) return;
-        
+        const track = currentRaceData.track || {};
+        // larghezza pista dal trackWidth (0..1): Monaco stretta, Monza larga
+        const tw = (typeof track.trackWidth === "number") ? track.trackWidth : 0.7;
+        const trackW = Math.max(14, 18 + tw * 34); // 14..52 px
+        const borderW = trackW + 6;
+
+        // colore asfalto/superficie
+        const surfaceColors = {
+            asphalt: { track: '#4a4a4a', border: '#2a2a2a' },
+            gravel:  { track: '#8a7a5a', border: '#5a4a3a' },
+            snow:    { track: '#d8d8e0', border: '#a8a8b8' },
+            sand:    { track: '#c8a868', border: '#9a8048' },
+            dirt:    { track: '#7a5a3a', border: '#5a3a2a' },
+        };
+        const sc = surfaceColors[track.surface] || surfaceColors.asphalt;
+
+        // bordo pista (scuro)
         ctx.beginPath();
         ctx.moveTo(trackPath[0].x, trackPath[0].y);
         for (let i = 1; i < trackPath.length; i++) {
             ctx.lineTo(trackPath[i].x, trackPath[i].y);
         }
-        ctx.lineWidth = 42;
-        ctx.strokeStyle = COLORS.trackBorder;
+        ctx.lineWidth = borderW;
+        ctx.strokeStyle = sc.border;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
         ctx.stroke();
 
+        // asfalto/superficie
         ctx.beginPath();
         ctx.moveTo(trackPath[0].x, trackPath[0].y);
         for (let i = 1; i < trackPath.length; i++) {
             ctx.lineTo(trackPath[i].x, trackPath[i].y);
         }
-        ctx.lineWidth = 36;
-        ctx.strokeStyle = COLORS.track;
+        ctx.lineWidth = trackW;
+        ctx.strokeStyle = sc.track;
         ctx.stroke();
 
-        if (trackPath.length > 10) {
+        // linea centro (tratteggiata, solo closed circuit)
+        if (track.type === "closed") {
             ctx.beginPath();
-            ctx.moveTo(trackPath[0].x, trackPath[0].y - 15);
-            ctx.lineTo(trackPath[0].x, trackPath[0].y + 15);
-            ctx.strokeStyle = '#FFF';
-            ctx.lineWidth = 3;
+            ctx.setLineDash([10, 14]);
+            ctx.moveTo(trackPath[0].x, trackPath[0].y);
+            for (let i = 1; i < trackPath.length; i++) {
+                ctx.lineTo(trackPath[i].x, trackPath[i].y);
+            }
+            ctx.lineWidth = 1.5;
+            ctx.strokeStyle = 'rgba(255,255,255,0.3)';
             ctx.stroke();
+            ctx.setLineDash([]);
+        }
+
+        // linea di partenza/arrivo (acheckerata)
+        const start = trackPath[0];
+        const next = trackPath[1] || trackPath[0];
+        const angle = Math.atan2(next.y - start.y, next.x - start.x);
+        const halfW = trackW / 2 + 2;
+        ctx.save();
+        ctx.translate(start.x, start.y);
+        ctx.rotate(angle);
+        for (let r = 0; r < 4; r++) {
+            ctx.fillStyle = (r % 2 === 0) ? '#FFFFFF' : '#222';
+            ctx.fillRect(-3, -halfW + (r * halfW * 2) / 4, 6, (halfW * 2) / 4);
+        }
+        ctx.restore();
+
+        // overlay info tracciato (nome, paese, caratteristiche)
+        if (track.name) {
+            ctx.fillStyle = 'rgba(0,0,0,0.75)';
+            ctx.fillRect(10, 10, 320, 58);
+            ctx.fillStyle = '#00d4ff';
+            ctx.font = 'bold 15px Arial';
+            ctx.textAlign = 'left';
+            ctx.fillText(track.name, 20, 32);
+            ctx.fillStyle = '#aab';
+            ctx.font = '11px Arial';
+            const feats = (track.features || []).slice(0, 4).join(' · ');
+            ctx.fillText(`${track.country || ''}  ${track.lengthKm ? track.lengthKm + ' km' : ''}`, 20, 50);
+            if (feats) ctx.fillText(feats, 20, 64);
         }
     }
 

@@ -28,21 +28,62 @@ const CareerManager = (() => {
        vivo di ALL_TEAMS. Chiamato all'avvio e dopo ogni restore. */
     function _applyPlayerDev() {
         if (!state) return;
-        if (!state.playerTeamDev) state.playerTeamDev = { staff: {}, rnd: { unlocked: {} } };
+        if (!state.playerTeamDev) state.playerTeamDev = { staff: {}, rnd: { unlocked: {} }, driverMorale: {} };
         const dev = state.playerTeamDev;
         if (!dev.rnd) dev.rnd = { unlocked: {} };
+        if (!dev.driverMorale) dev.driverMorale = {};
         const team = getPlayerTeam();
         if (!team) return;
         team.staff = Object.assign({}, team.staff, dev.staff || {});
         team.rnd = { unlocked: Object.assign({}, dev.rnd.unlocked || {}) };
+        for (const d of (team.drivers || [])) {
+            if (dev.driverMorale[d.id] !== undefined) d.morale = dev.driverMorale[d.id];
+        }
     }
 
     function _buildCalendar(cfg) {
         const cal = [];
-        const trackPool = TRACKS_BY_FAMILY[cfg.family] || [];
-        for (let r = 1; r <= 24; r++) {
-            const track = trackPool.length ? trackPool[Math.floor(Math.random() * trackPool.length)] : { id:`gen_${r}`, name:`Round ${r}`, country:"-", surface:"asphalt" };
-            cal.push({ round: r, name: track.name, trackId: track.id, country: track.country || "-", surface: track.surface || "asphalt", completed: false });
+        const trackPool = (TRACKS_BY_FAMILY[cfg.family] || []).slice();
+        const rounds = 24; // Fissato a 24 gare (vedi startNewCareer.totalRounds)
+
+        // Mescola il pool (Fisher-Yates) per evitare bias di ordine fisso.
+        for (let i = trackPool.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [trackPool[i], trackPool[j]] = [trackPool[j], trackPool[i]];
+        }
+
+        // Se il pool è più piccolo del numero di gare, ripeti il pool intero
+        // almeno una volta, poi continua mescolando una seconda copia. Questo
+        // minimizza le ripetizioni e le distribuisce uniformemente.
+        const picks = [];
+        if (trackPool.length === 0) {
+            for (let r = 1; r <= rounds; r++) picks.push({ id:`gen_${r}`, name:`Round ${r}`, country:"-", surface:"asphalt" });
+        } else {
+            let idx = 0;
+            while (picks.length < rounds) {
+                if (idx >= trackPool.length) {
+                    // seconda passata: re-mescola per variare l'ordine
+                    for (let i = trackPool.length - 1; i > 0; i--) {
+                        const j = Math.floor(Math.random() * (i + 1));
+                        [trackPool[i], trackPool[j]] = [trackPool[j], trackPool[i]];
+                    }
+                    idx = 0;
+                }
+                picks.push(trackPool[idx % trackPool.length]);
+                idx++;
+            }
+        }
+
+        for (let r = 1; r <= rounds; r++) {
+            const track = picks[r - 1];
+            cal.push({
+                round: r,
+                name: track.name,
+                trackId: track.id,
+                country: track.country || "-",
+                surface: track.surface || "asphalt",
+                completed: false,
+            });
         }
         return cal;
     }
@@ -78,6 +119,7 @@ const CareerManager = (() => {
             round.completed = true;
             _applyPointsFromResult(result);
             _awardPrizeMoney(result);
+            _updateMorale(result);
             _recomputeStandings();
         }
         _persist();
@@ -105,6 +147,39 @@ const CareerManager = (() => {
         state.finances.budget += prize;
     }
 
+    /* --- SISTEMA MORALE DINAMICO ------------------------------------------ */
+    /* Aggiorna il morale di tutti i piloti dopo una gara in base alla posizione.
+       Podio = +, zona punti = +/-, fondo classifica o DNF = -. Persiste il morale
+       dei piloti del giocatore in playerTeamDev.driverMorale. */
+    function _updateMorale(result) {
+        if (!state || !result || !result.results) return;
+        _ensureDev();
+        const dev = state.playerTeamDev;
+        if (!dev.driverMorale) dev.driverMorale = {};
+        const teams = ALL_TEAMS[state.champId] || [];
+
+        for (const r of result.results) {
+            let delta = 0;
+            const pos = r.position;
+            if (pos === "DNF") { delta = -5; }
+            else if (pos === 1) { delta = 5; }
+            else if (pos <= 3) { delta = 3; }
+            else if (pos <= 10) { delta = 1; }
+            else if (pos <= 15) { delta = -1; }
+            else { delta = -2; }
+
+            for (const t of teams) {
+                const d = (t.drivers || []).find(x => x.id === r.driverId);
+                if (d) {
+                    d.morale = Math.max(0, Math.min(100, (d.morale || 75) + delta));
+                    // persisti solo i piloti del giocatore
+                    if (t.id === state.playerTeamId) dev.driverMorale[r.driverId] = d.morale;
+                    break;
+                }
+            }
+        }
+    }
+
     function _recomputeStandings() {
         if (!state) return;
         state.standings.drivers.sort((a,b) => b.points - a.points);
@@ -124,10 +199,11 @@ const CareerManager = (() => {
 
     /* --- SVILUPPO R&D (persistente) --------------------------------------- */
     function _ensureDev() {
-        if (!state.playerTeamDev) state.playerTeamDev = { staff: {}, rnd: { unlocked: {} } };
+        if (!state.playerTeamDev) state.playerTeamDev = { staff: {}, rnd: { unlocked: {} }, driverMorale: {} };
         if (!state.playerTeamDev.staff) state.playerTeamDev.staff = {};
         if (!state.playerTeamDev.rnd) state.playerTeamDev.rnd = { unlocked: {} };
         if (!state.playerTeamDev.rnd.unlocked) state.playerTeamDev.rnd.unlocked = {};
+        if (!state.playerTeamDev.driverMorale) state.playerTeamDev.driverMorale = {};
     }
     /* Imposta il livello di un reparto: aggiorna team vivo + snapshot persistente. */
     function setStaffLevel(deptKey, level) {

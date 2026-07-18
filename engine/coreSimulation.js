@@ -184,6 +184,13 @@ class RaceCalculator {
         // tempo base per giro di riferimento (ms) — track-aware
         const baseLapMs = this._baseLapTimeMs(cfg, track);
 
+        // fattori tracciato (0..1 con fallback neutro)
+        const tOver = track && typeof track.overtakingDifficulty === "number" ? track.overtakingDifficulty : 0.3;
+        const tTyre = track && typeof track.tyreStress === "number" ? track.tyreStress : 0.5;
+        const tElev = track && typeof track.elevationChange === "number" ? track.elevationChange : 0.3;
+        const tFuel = track && typeof track.fuelEffect === "number" ? track.fuelEffect : 0.3;
+        const tDrs = track && typeof track.drsZones === "number" ? track.drsZones : 0;
+
         for (const entrant of participants) {
             // tempo totale iniziale dal ritmo puro
             let totalTime = 0;
@@ -200,24 +207,40 @@ class RaceCalculator {
 
                 // --- MODULO TRAFFICO (se features.traffic true) ---
                 if (cfg.features.traffic) {
-                    lapTime = this._applyTraffic(cfg, entrant, lapTime, grid, lap);
+                    lapTime = this._applyTraffic(cfg, entrant, lapTime, grid, lap, tOver);
                 }
 
                 // --- MODULO GOMME (se features.tyreWear true) ---
                 if (cfg.features.tyreWear) {
                     // più giri fai, più la gomma si degrada e il giro rallenta
-                    tyreWear += this._tyreWearPerLap(cfg, entrant);
+                    // il degrado è modulato dal tyreStress del tracciato (Suzuka alta)
+                    tyreWear += this._tyreWearPerLap(cfg, entrant) * (0.6 + 0.8 * tTyre);
                     // effetto del degrado sul tempo: fino a +6% con gomma andata
                     lapTime *= (1 + 0.06 * tyreWear * cfg.tyreRules.degradationCurve);
                     // bonus gestione conservativa del pilota
                     lapTime *= (1 - 0.02 * this._stat(entrant.driver, "fuelTyreMgmt"));
                 }
 
+                // --- DISELIVELLO: tracciati collinosi (Spa) premiano carControl/stamina ---
+                if (tElev > 0.1) {
+                    lapTime *= (1 + 0.03 * tElev * (1 - this._stat(entrant.driver, "carControl", 0.7)));
+                }
+
+                // --- EFFETTO CARBURANTE/QUOTA (Interlagos, Fuji: alta quota) ---
+                // Alta quota = meno potenza ma anche più impatto del peso carburante.
+                // fuelTyreMgmt aiuta a gestire il consumo.
+                if (tFuel > 0.1) {
+                    const fuelLoadFactor = (1 - (lap - 1) / laps) * tFuel;
+                    lapTime *= (1 + 0.025 * fuelLoadFactor * (1 - 0.5 * this._stat(entrant.driver, "fuelTyreMgmt")));
+                }
+
                 // --- MODULO DRS / SLIPSTREAM (se drsBoost > 0) ---
+                // Le zone DRS del tracciato aumentano la probabilità/efficacia del boost.
                 if (cfg.physicsModifiers.drsBoost > 0 && lap > 2) {
-                    // un pilota che segue guadagna il boost DRS in parte dei giri
-                    if (this._rand() < 0.35) {
-                        lapTime *= (1 - cfg.physicsModifiers.drsBoost * 0.5);
+                    const drsChance = 0.25 + 0.12 * tDrs; // più zone = più occasioni
+                    if (this._rand() < drsChance) {
+                        const boost = cfg.physicsModifiers.drsBoost * (0.5 + 0.25 * tDrs);
+                        lapTime *= (1 - boost);
                     }
                 }
 
@@ -270,6 +293,11 @@ class RaceCalculator {
         const baseLapMs = this._baseLapTimeMs(cfg, track);
         let grid = [...participants].sort((a, b) => b.rawPace - a.rawPace);
 
+        // fattori tracciato (0..1 con fallback neutro)
+        const tTyre = track && typeof track.tyreStress === "number" ? track.tyreStress : 0.5;
+        const tElev = track && typeof track.elevationChange === "number" ? track.elevationChange : 0.3;
+        const tFuel = track && typeof track.fuelEffect === "number" ? track.fuelEffect : 0.3;
+
         for (const entrant of participants) {
             let totalTime = 0;
             let elapsedMinutes = 0;
@@ -309,11 +337,16 @@ class RaceCalculator {
                     lapTime *= 1.03;
                 }
 
-                // --- gomme ---
+                // --- gomme (modulate dal tyreStress del tracciato) ---
                 if (cfg.features.tyreWear) {
-                    tyreWear += this._tyreWearPerLap(cfg, entrant);
+                    tyreWear += this._tyreWearPerLap(cfg, entrant) * (0.6 + 0.8 * tTyre);
                     lapTime *= (1 + 0.05 * tyreWear * cfg.tyreRules.degradationCurve);
                     lapTime *= (1 - 0.02 * this._stat(entrant.driver, "fuelTyreMgmt"));
+                }
+
+                // --- dislivello (Spa, Sebring) ---
+                if (tElev > 0.1) {
+                    lapTime *= (1 + 0.03 * tElev * (1 - this._stat(entrant.driver, "carControl", 0.7)));
                 }
 
                 const variance = (1 - this._stat(entrant.driver, "consistency")) * 0.015;
@@ -517,12 +550,24 @@ class RaceCalculator {
      * SOTTOMETODI AUSILIARI
      * ========================================================================== */
 
-    // traffico: chi sta davanti rallenta chi sta dietro (dirty air) su CircuitRace
-    _applyTraffic(cfg, entrant, lapTime, grid, lap) {
+    // traffico: chi sta davanti rallenta chi sta dietro (dirty air) su CircuitRace.
+    // tOver = overtakingDifficulty del tracciato (0..1): alto = difficile sorpassare
+    // (Monaco), quindi chi resta dietro perde più tempo e non riesce a passare.
+    _applyTraffic(cfg, entrant, lapTime, grid, lap, tOver = 0.3) {
         const idx = grid.indexOf(entrant);
         if (idx > 0 && this._rand() < 0.3) {
-            // segue qualcuno: dirty air riduce prestazioni ma aiuta sorpasso
-            lapTime *= (1 + 0.01 * cfg.physicsModifiers.dirtyAirEffect);
+            // segue qualcuno: dirty air riduce prestazioni ma aiuta sorpasso.
+            // Su circuiti dove si sorpassa poco (tOver alto) il danno del restare
+            // dietro è maggiore e il "recupero" minore.
+            const dirtyAir = cfg.physicsModifiers.dirtyAirEffect;
+            const trafficPenalty = 0.01 * dirtyAir * (0.5 + 1.5 * tOver);
+            const overtakeChance = 0.1 * (1 - tOver); // facile sorpasso -> più tentativi
+            if (this._rand() < overtakeChance) {
+                // sorpasso riuscito: piccolo bonus, niente penalità
+                lapTime *= (1 - 0.005 * dirtyAir);
+            } else {
+                lapTime *= (1 + trafficPenalty);
+            }
         }
         // tolleranza al contatto: gomme che durano (NASCAR) = contatti frequenti
         if (cfg.physicsModifiers.contactTolerance > 0.15 && this._rand() < 0.05) {
@@ -585,14 +630,19 @@ class RaceCalculator {
         return base / (0.7 + 0.3 * grip) / Math.max(0.5, entrant.rawPace);
     }
 
-    // formattazione tempo mm:ss.mmm
+    // formattazione tempo: h:mm:ss.mmm per gare endurance (>60min), mm:ss.mmm altrimenti
     _formatTime(ms) {
         if (ms === Infinity || !isFinite(ms)) return "DNF";
         const totalSec = ms / 1000;
-        const m = Math.floor(totalSec / 60);
+        const h = Math.floor(totalSec / 3600);
+        const m = Math.floor((totalSec % 3600) / 60);
         const s = Math.floor(totalSec % 60);
-        const milli = Math.floor((ms % 1000));
-        return `${m}:${s.toString().padStart(2, "0")}.${milli.toString().padStart(3, "0")}`;
+        const milli = Math.floor(ms % 1000);
+        const pad = (n, w = 2) => n.toString().padStart(w, "0");
+        if (h > 0) {
+            return `${h}:${pad(m)}:${pad(s)}.${pad(milli, 3)}`;
+        }
+        return `${m}:${pad(s)}.${pad(milli, 3)}`;
     }
 }
 
