@@ -97,7 +97,10 @@ const CareerManager = (() => {
         } else {
             state.currentSession = 0;
             state.currentRound++;
-            if (state.currentRound > state.totalRounds) {
+            // totalRounds is a count (e.g. 24); calendar indices are 0..totalRounds-1.
+            // Once currentRound reaches totalRounds, the season is over.
+            if (state.currentRound >= state.totalRounds) {
+                _persist(); // Persist the completed season state
                 return { seasonComplete: true };
             }
         }
@@ -484,7 +487,11 @@ const CareerManager = (() => {
                     const rate = ss.totalRaces > 0 ? ss.finishes / ss.totalRaces : 0;
                     achieved = rate >= obj.threshold; break;
                 case "qualifyingPosition":
-                    achieved = ss.qualTop5 >= (obj.threshold >= 5 ? 5 : 3); break;
+                    // topN = qualifying position target (5 or 10); racesCount = how many races to hit it.
+                    const topN = obj.topN || 5;
+                    const racesCount = obj.racesCount || obj.threshold || 1;
+                    achieved = (topN <= 5 ? ss.qualTop5 : ss.qualTop10) >= racesCount;
+                    break;
                 case "championshipPosition":
                     const teamStand = state.standings.teams.findIndex(t => t.id === state.playerTeamId);
                     achieved = teamStand >= 0 && teamStand < obj.threshold; break;
@@ -579,6 +586,12 @@ const CareerManager = (() => {
     }
 
     function _persist() { if (!state) return; if (!saveSlotId) saveSlotId = SaveSystem.createSave(state.name, { careerState: state }); else SaveSystem.updateSave(saveSlotId, { careerState: state }); }
+    /** Public save: forces a persist of the current career. Returns true on success. */
+    function save() {
+        if (!state) return false;
+        _persist();
+        return true;
+    }
     function loadFromSlot(slotId) { const data = SaveSystem.loadSave(slotId); if (!data) return false; saveSlotId = slotId; return restore(data); }
     function restore(data) { state = data.careerState; _applyPlayerDev(); return true; }
     function close() { state = null; saveSlotId = null; }
@@ -588,6 +601,6 @@ const CareerManager = (() => {
     function getPlayerTeam() { return (ALL_TEAMS[state.champId]||[]).find(t => t.id === state.playerTeamId) || null; }
     function nextRoundInfo() { return state ? state.calendar[state.currentRound] : null; }
 
-    return { startNewCareer, advanceSession, simulateCurrentSession, loadFromSlot, restore, close, getState, isActive, getPlayerTeam, nextRoundInfo, getBudget, trySpend, setStaffLevel, markProjectUnlocked, signSponsor, removeSponsor, getSponsors, _evaluateSponsorObjectives, startNextSeason, getSeasonSummary };
+    return { startNewCareer, advanceSession, simulateCurrentSession, loadFromSlot, restore, close, getState, isActive, getPlayerTeam, nextRoundInfo, getBudget, trySpend, setStaffLevel, markProjectUnlocked, signSponsor, removeSponsor, getSponsors, _evaluateSponsorObjectives, startNextSeason, getSeasonSummary, save };
 })();
 if (typeof window !== "undefined") window.CareerManager = CareerManager;

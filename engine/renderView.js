@@ -84,43 +84,62 @@ const RenderView = (() => {
         ctx.fillRect(0, 0, w, h);
     }
 
-    let speedLevels = [1, 2, 5, 15];
+    let speedLevels = [1, 2, 5, 15, 60];
     let currentSpeedIdx = 0;
     function toggleSpeed() {
         currentSpeedIdx = (currentSpeedIdx + 1) % speedLevels.length;
-        animator.setSpeed(speedLevels[currentSpeedIdx]);
+        const speed = speedLevels[currentSpeedIdx];
+        animator.setSpeed(speed);
         const btn = document.getElementById('btn-speed');
-        if(btn) btn.innerText = `Speed: ${speedLevels[currentSpeedIdx]}x`;
+        if(btn) btn.innerText = speed >= 60 ? `Speed: INSTANT` : `Speed: ${speed}x`;
     }
 
-    /* Converts 0..1000 waypoints to canvas pixels */
+    /* Converts 0..1000 waypoints to canvas pixels.
+       Guards against missing/invalid waypoints to avoid NaN coordinates. */
     function buildPath(track) {
+        if (!canvas || !track || !Array.isArray(track.waypoints) || track.waypoints.length < 2) {
+            return [];
+        }
         const w = canvas.width;
         const h = canvas.height;
         const padding = 40;
-        const usableW = w - padding * 2;
-        const usableH = h - padding * 2;
-        
-        let pts = track.waypoints.map(p => ({
-            x: padding + (p[0] / 1000) * usableW,
-            y: padding + (p[1] / 1000) * usableH
-        }));
+        const usableW = Math.max(10, w - padding * 2);
+        const usableH = Math.max(10, h - padding * 2);
+
+        let pts = track.waypoints.map(p => {
+            // Each waypoint should be [x, y] with values in 0..1000
+            if (!Array.isArray(p) || p.length < 2) return null;
+            const nx = typeof p[0] === "number" && isFinite(p[0]) ? p[0] : 500;
+            const ny = typeof p[1] === "number" && isFinite(p[1]) ? p[1] : 500;
+            return {
+                x: padding + (Math.max(0, Math.min(1000, nx)) / 1000) * usableW,
+                y: padding + (Math.max(0, Math.min(1000, ny)) / 1000) * usableH
+            };
+        }).filter(Boolean);
+
+        if (pts.length < 2) return [];
 
         if (track.type === "closed") {
-            pts.push({ ...pts[0] }); 
+            pts.push({ ...pts[0] });
         }
         return pts;
     }
 
-    /* Get X,Y coordinates based on progress (0..1) */
+    /* Get X,Y coordinates based on progress (0..1).
+       Clamps index to avoid out-of-bounds access. */
     function getPositionOnPath(progress) {
         if (trackPath.length < 2) return { x: 0, y: 0 };
-        
-        let exactIndex = progress * (trackPath.length - 1);
+
+        // Clamp progress to [0, 1] to avoid NaN from negative/oversized values
+        const clampedProgress = Math.max(0, Math.min(1, progress || 0));
+
+        let exactIndex = clampedProgress * (trackPath.length - 1);
         let index = Math.floor(exactIndex);
         let fraction = exactIndex - index;
-        
+
+        // Guard: if index is at or beyond the last point, return the last point
         if (index >= trackPath.length - 1) return trackPath[trackPath.length - 1];
+        if (index < 0) return trackPath[0];
 
         let p1 = trackPath[index];
         let p2 = trackPath[index + 1];
@@ -352,7 +371,12 @@ const RenderView = (() => {
         return `${m}:${s.toString().padStart(2,'0')}.${milli.toString().padStart(3,'0')}`;
     }
 
-    return { init, loadAndPlay, showTrackPreview, clearCanvas };
+    /** Returns whether the race animation is currently playing. */
+    function isPlaying() {
+        return animator && animator.isPlaying;
+    }
+
+    return { init, loadAndPlay, showTrackPreview, clearCanvas, isPlaying };
 })();
 
 if (typeof window !== "undefined") window.RenderView = RenderView;

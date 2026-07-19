@@ -72,8 +72,17 @@ class RaceAnimator {
         if (this.onUpdateCallback) this.onUpdateCallback(this.getState());
     }
 
-    /** Sets the playback speed */
-    setSpeed(s) { this.speed = s; }
+    /** Sets the playback speed.
+        When speed >= 60 ("Instant"), jumps straight to the end of the race. */
+    setSpeed(s) {
+        this.speed = s;
+        if (s >= 60 && this.durationMs > 0) {
+            this.currentTimeMs = this.durationMs;
+            this.isPlaying = false;
+            if (this.animationFrameId) cancelAnimationFrame(this.animationFrameId);
+            if (this.onUpdateCallback) this.onUpdateCallback(this.getState());
+        }
+    }
 
     /** Registers who wants to receive position updates (the Renderer) */
     onUpdate(fn) { this.onUpdateCallback = fn; }

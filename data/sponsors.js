@@ -50,7 +50,7 @@ const SPONSOR_POOL = [
     { id:"oakley_optics", name:"Oakley Optics", tier:"technical", color:"#2ecc71",
       basePerRace: 300, bonusWin: 100, bonusPodium: 60, bonusPoints: 2,
       prestigeReq: 30,
-      objective:{ type:"qualifyingPosition", threshold:5, reward: 1500, label:"Qualify in the top 5 for 5 races" } },
+      objective:{ type:"qualifyingPosition", topN:5, racesCount:5, threshold:5, reward: 1500, label:"Qualify in the top 5 for 5 races" } },
 
     { id:"elf_fuels", name:"Elf Racing Fuels", tier:"technical", color:"#f39c12",
       basePerRace: 400, bonusWin: 200, bonusPodium: 100, bonusPoints: 4,
@@ -86,7 +86,7 @@ const SPONSOR_POOL = [
     { id:"tag_heuer", name:"TAG Heuer", tier:"partner", color:"#16a085",
       basePerRace: 160, bonusWin: 70, bonusPodium: 30, bonusPoints: 1,
       prestigeReq: 25,
-      objective:{ type:"qualifyingPosition", threshold:10, reward: 700, label:"Qualify in the top 10 for 3 races" } },
+      objective:{ type:"qualifyingPosition", topN:10, racesCount:3, threshold:10, reward: 700, label:"Qualify in the top 10 for 3 races" } },
 ];
 
 /* Returns available sponsors (not yet signed) for the player,

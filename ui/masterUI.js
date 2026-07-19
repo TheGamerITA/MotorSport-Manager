@@ -7,6 +7,32 @@ const MasterUI = (() => {
         bindNav();
         bindRaceControls();
         bindScouting();
+        bindKeyboard();
+    }
+
+    /* Keyboard shortcuts:
+       - Space / P : Pause/Play the race animation
+       - R         : Reset the race animation */
+    function bindKeyboard() {
+        document.addEventListener("keydown", (e) => {
+            // Ignore if user is typing in an input/textarea
+            const tag = (e.target?.tagName || "").toLowerCase();
+            if (tag === "input" || tag === "textarea" || tag === "select") return;
+
+            if (e.code === "Space" || e.key === "p" || e.key === "P") {
+                e.preventDefault();
+                if (typeof RenderView !== "undefined" && RenderView.isPlaying) {
+                    // Toggle: if playing → pause, if paused → play
+                    const btn = RenderView.isPlaying()
+                        ? document.getElementById("btn-pause")
+                        : document.getElementById("btn-play");
+                    if (btn) btn.click();
+                }
+            } else if (e.key === "r" || e.key === "R") {
+                const btnReset = document.getElementById("btn-reset");
+                if (btnReset) btnReset.click();
+            }
+        });
     }
 
     function refreshFromCareer() {
@@ -33,15 +59,19 @@ const MasterUI = (() => {
 
     function runWeekend() {
         const btn = $("#simBtn");
-        const state = CareerManager.getState();
         const sessions = ["Practice", "Qualifying", "Race"];
 
         btn.disabled = true;
+        const oldText = btn.textContent;
         btn.textContent = "SIMULATING...";
+        btn.classList.add("btn-loading");
 
         setTimeout(() => {
+            const preState = CareerManager.getState();
+            const completedSession = preState.currentSession;
+            const completedRound = preState.currentRound; // 0-indexed round that was just simulated
+
             const result = CareerManager.simulateCurrentSession();
-            const completedSession = state.currentSession;
             const advance = CareerManager.advanceSession();
 
             if (result) {
@@ -51,9 +81,10 @@ const MasterUI = (() => {
                         // Race: full animation with drivers
                         RenderView.loadAndPlay(result);
                     } else {
-                        // Practice / Qualifying: show static track preview
-                        // (avoids the "green canvas" with no animation)
-                        const round = state.calendar[state.currentRound];
+                        // Practice / Qualifying: show static track preview of the
+                        // CURRENT round (round hasn't advanced for practice/quali)
+                        const freshState = CareerManager.getState();
+                        const round = freshState.calendar[completedRound];
                         const label = completedSession === 0 ? "📊 PRACTICE" : "🏁 QUALIFYING";
                         if (round && round.trackId) {
                             RenderView.showTrackPreview(round.trackId, label);
@@ -68,10 +99,20 @@ const MasterUI = (() => {
                 btn.onclick = _startNextSeason;
                 _showSeasonSummary();
             } else {
-                const nextSess = sessions[CareerManager.getState().currentSession];
-                $("#statusMsg").textContent = `Round ${state.currentRound + 1}: ${sessions[completedSession]} complete. Next: ${nextSess}`;
+                const freshState = CareerManager.getState();
+                const nextSess = sessions[freshState.currentSession];
+                // For race (session 2), advanceSession already incremented the round,
+                // so completedRound + 1 (1-indexed) is the round we just finished.
+                // For practice/qualifying, round didn't change.
+                const completedRoundLabel = completedRound + 1;
+                const nextRoundLabel = freshState.currentRound + 1;
+                const roundInfo = completedSession === 2
+                    ? `Round ${completedRoundLabel}: Race complete → Next: Round ${nextRoundLabel} ${nextSess}`
+                    : `Round ${completedRoundLabel}: ${sessions[completedSession]} complete → Next: ${nextSess}`;
+                $("#statusMsg").textContent = roundInfo;
                 btn.textContent = `SIMULATE ${nextSess.toUpperCase()}`;
             }
+            btn.classList.remove("btn-loading");
             btn.disabled = false;
             refreshAllViews();
         }, 500);
@@ -99,11 +140,20 @@ const MasterUI = (() => {
     }
 
     function renderQualifyingResult(result) {
-        $("#resultsTable thead").innerHTML = `<tr><th>Grid</th><th>Driver</th><th>Team</th><th>Lap Time</th><th>Gap to Pole</th><th>Gap to Prev.</th></tr>`;
-        const poleTime = result.grid.length ? result.grid[0].bestLapMs : 0;
         const playerTeamId = CareerManager.getState()?.playerTeamId;
         const allTeams = (typeof ALL_TEAMS !== "undefined" && ALL_TEAMS[CareerManager.getState().champId]) || [];
         const teamColor = (teamName) => (allTeams.find(tm => tm.name === teamName)?.color) || "#888";
+
+        // Bug fix: handle empty grid gracefully
+        if (!result.grid || !result.grid.length) {
+            $("#resultsTable thead").innerHTML = "";
+            $("#resultsTable tbody").innerHTML = `<tr><td colspan="6" class="hint" style="text-align:center;padding:30px;">No qualifying data available.</td></tr>`;
+            $("#raceLog").innerHTML = `<div class="log-line">⚠ Qualifying produced no results.</div>`;
+            return;
+        }
+
+        $("#resultsTable thead").innerHTML = `<tr><th>Grid</th><th>Driver</th><th>Team</th><th>Lap Time</th><th>Gap to Pole</th><th>Gap to Prev.</th></tr>`;
+        const poleTime = result.grid[0].bestLapMs;
 
         $("#resultsTable tbody").innerHTML = result.grid.map((g, i) => {
             const gapPole = i === 0 ? "POLE" : `+${((g.bestLapMs - poleTime) / 1000).toFixed(3)}s`;
@@ -205,15 +255,30 @@ const MasterUI = (() => {
     }
 
     function renderRaceResult(result) {
+        const playerTeamId = CareerManager.getState()?.playerTeamId;
+        const allTeams = (typeof ALL_TEAMS !== "undefined" && ALL_TEAMS[CareerManager.getState().champId]) || [];
+        const teamColor = (teamName) => (allTeams.find(tm => tm.name === teamName)?.color) || "#888";
+
         $("#resultsTable thead").innerHTML = `<tr><th>Pos</th><th>Driver</th><th>Team</th><th>Time</th><th>Points</th></tr>`;
-        $("#resultsTable tbody").innerHTML = result.results.map(r => `
-            <tr>
-                <td class="pos">${r.position}</td>
+        $("#resultsTable tbody").innerHTML = result.results.map(r => {
+            const isDNF = r.position === "DNF";
+            const isPlayer = allTeams.some(tm => tm.name === r.team && tm.id === playerTeamId);
+            let rowClass = "";
+            let rowStyle = "";
+            if (isDNF) { rowClass = 'class="dnf-row"'; rowStyle = 'style="opacity:0.6;"'; }
+            else if (isPlayer) { rowStyle = 'style="font-weight:bold;background:rgba(0,212,255,0.08);"'; }
+            const posDisplay = isDNF ? `<span class="dnf-badge">DNF</span>` : `<span class="pos">${r.position}</span>`;
+            const teamHtml = `<span style="color:${teamColor(r.team)};">●</span> ${r.team}`;
+            const timeHtml = isDNF ? `<span style="color:var(--bad);">—</span>` : `<span class="time">${r.timeStr}</span>`;
+            return `
+            <tr ${rowClass} ${rowStyle}>
+                <td>${posDisplay}</td>
                 <td>${r.driver}</td>
-                <td>${r.team}</td>
-                <td class="time">${r.timeStr}</td>
-                <td class="pts">${r.points}</td>
-            </tr>`).join("");
+                <td>${teamHtml}</td>
+                <td>${timeHtml}</td>
+                <td class="pts">${isDNF ? '—' : r.points}</td>
+            </tr>`;
+        }).join("");
 
         $("#raceLog").innerHTML = result.logs.length ? result.logs.map(l => `<div class="log-line"><span class="drv">${l.driver}</span> ${l.msg}</div>`).join("") : `<div class="log-line">Clean race.</div>`;
     }
@@ -510,14 +575,27 @@ const MasterUI = (() => {
                 const statusCls = done ? "color:var(--txt-2);" : isCurrent ? "color:var(--accent);font-weight:bold;" : "";
                 const badge = done ? "✔" : isCurrent ? "▶" : (i+1);
                 return `
-                <div class="card" style="${isCurrent?'border-left:3px solid var(--accent);':''}">
+                <div class="card cal-card" data-track="${tr.trackId||''}" style="${isCurrent?'border-left:3px solid var(--accent);':''} cursor:pointer; transition:opacity 0.2s;">
                     <div style="display:flex; justify-content:space-between; align-items:baseline;">
                         <h3 style="margin:0;">${badge} ${tr.name || "Round "+(i+1)}</h3>
                         <span style="${statusCls}font-size:12px;">${done?"Completed":isCurrent?"In progress":"To be disputed"}</span>
                     </div>
                     <p class="hint" style="margin:6px 0;">${tr.country || ""}${tr.surface?" · "+tr.surface:""}</p>
+                    <p class="hint" style="margin:2px 0 0; font-size:10px; color:var(--accent);">🔍 Click to preview track</p>
                 </div>`;
             }).join("")}</div>`;
+
+        // Bind click on calendar cards to show track preview
+        $$("#calendarContent .cal-card").forEach(card => {
+            card.addEventListener("mouseenter", () => card.style.opacity = "0.85");
+            card.addEventListener("mouseleave", () => card.style.opacity = "1");
+            card.onclick = () => {
+                const trackId = card.dataset.track;
+                if (trackId && typeof RenderView !== "undefined") {
+                    RenderView.showTrackPreview(trackId, "📍 TRACK PREVIEW");
+                }
+            };
+        });
     }
 
     function renderSponsorsView() {
@@ -634,7 +712,12 @@ const MasterUI = (() => {
             case "finishRate":
                 const rate = (ss.totalRaces||0) > 0 ? (ss.finishes||0) / ss.totalRaces : 0;
                 return `Progress: ${Math.round(rate*100)}% / ${Math.round(obj.threshold*100)}%`;
-            case "qualifyingPosition": current = ss.qualTop5 || 0; break;
+            case "qualifyingPosition":
+                const topN = obj.topN || 5;
+                const racesCount = obj.racesCount || obj.threshold || 1;
+                current = (topN <= 5 ? ss.qualTop5 : ss.qualTop10) || 0;
+                target = racesCount;
+                break;
             case "championshipPosition":
                 const pos = state.standings.teams.findIndex(t => t.id === state.playerTeamId);
                 return pos >= 0 ? `Current position: ${pos+1} / target top ${obj.threshold}` : "—";

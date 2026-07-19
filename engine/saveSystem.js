@@ -16,7 +16,6 @@
  *   loadSave(id)          -> returns the entire saved state (for careerManager.restore)
  *   updateSave(id, data)  -> overwrites an existing slot (used by autoSave)
  *   deleteSave(id)
- *   autoSave()            -> updates the "current" slot of the active career
  *   exportSave(id)        -> downloads a JSON file as backup
  *   importSave(jsonText)  -> imports a JSON backup as a new slot
  *
